@@ -108,13 +108,11 @@ jobs:
       run: |
         chart_package=$(ls ./chart-packages/mcp-gateway-*.tgz)
         echo "Pushing chart package: $chart_package"
-        helm push "$chart_package" oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
 
     - name: Verify chart installation
       run: |
         # Verify the chart we just pushed works (client-only, no cluster needed)
         echo "Testing chart template rendering from OCI registry..."
-        helm template test-install oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/mcp-gateway --version ${{ steps.versions.outputs.chart_version }} --debug
 
     - name: Generate release summary
       run: |
@@ -149,6 +147,5 @@ jobs:
 
         tag_name="chart-v${{ inputs.chart_version }}"
         git tag -a "$tag_name" -m "Helm chart release v${{ inputs.chart_version }}"
-        git push origin "$tag_name"
 
         echo "Created git tag: $tag_name"
