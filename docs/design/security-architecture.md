@@ -130,9 +130,12 @@ Context pollution — where untrusted data from one tool call influences subsequ
 | Risk | Severity | Current status | Mitigation |
 |------|----------|---------------|------------|
 | No payload-level prompt injection detection | Medium | By design — gateway for tool calls is just a routing layer | Use prompt guard tooling alongside the gateway |
-| Tool responses streamed as-is from backends | Medium | By design | Upstream servers must validate outputs; prompt guards can inspect responses |
+| Tool responses streamed as-is from backends | Medium | By design | Upstream servers must validate outputs; prompt guards can inspect, reject, modify responses |
 | Client custom headers forwarded to backends | Low | `mcp-session-id` replaced with specific target mcp backend session | Review header forwarding policy if backends are untrusted |
 | No response size limits on SSE streams | Low | Not implemented | Envoy buffer limits and timeouts provide partial mitigation |
+| JWT_SESSION_SIGNING_KEY defaults to "default-not-secure" if not set | High | Not implemented | Set via flag/envvar or [#714](https://github.com/Kuadrant/mcp-gateway/issues/714) to have the controller generate and manage the key |
+| MCPVirtualServer only hides tools from listing, does not prevent calling | Medium | By design — virtual servers filter tools/list but authorized clients can still call any tool directly | Use AuthPolicy with tool-level RBAC to enforce access control; virtual servers control visibility, not authorization. Document this clearly in virtual server docs |
+| Client OAuth tokens forwarded to backends without token exchange | Medium | By design — all headers forwarded | Configure token exchange via AuthPolicy to replace client tokens with scoped tokens |
 | TLS configuration not included in examples | Low | Relies on infrastructure layer | Deploy behind Istio or configure TLS on Gateway listeners for production |
 
 ## Recommendations for Secure Deployment
@@ -142,7 +145,7 @@ Context pollution — where untrusted data from one tool call influences subsequ
 3. **Use prompt guard tooling** to inspect MCP payloads for injection and content policy violations
 4. **Secure upstream MCP servers** — the gateway enforces transport policy, but backends must validate their own inputs
 5. **Enable TLS** on Gateway listeners and ensure backend communication is encrypted
-7. **Deploy Redis** for session caching in multi-replica deployments to maintain session isolation across instances
+7. **Deploy Redis Compatible Data Store** for session caching in multi-replica deployments to maintain session isolation across instances
 8. **Apply RateLimitPolicy** via Kuadrant to protect against abuse
 
 ## Infrastructure Deduplication
