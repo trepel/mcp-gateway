@@ -60,7 +60,7 @@ Under **Tools > List Tools**, the revoked tool should no longer appear in the li
 
 **Check `tools/call` denial:**
 
-Attempt to call the revoked tool directly. The request should be denied with a 403 Forbidden response.
+Attempt to call the revoked tool. Since the tool is no longer in the user's authorized set, the request should fail.
 
 ## Step 4: Monitor Revocation Enforcement
 
