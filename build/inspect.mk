@@ -18,7 +18,7 @@ define inspect-server-template
 		echo "MCP server: http://localhost:$(INSPECT_LOCAL_PORT)$(5)"; \
 		echo "Inspector:  $$INSPECTOR_URL"; \
 		echo ""; \
-		MCP_AUTO_OPEN_ENABLED=false DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector@latest & \
+		MCP_AUTO_OPEN_ENABLED=false DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector@0.21.1 & \
 		sleep 2; \
 		$(open) "$$INSPECTOR_URL" 2>/dev/null || echo "(Could not open browser automatically)"; \
 		echo "Press Ctrl+C to stop and cleanup"; \
@@ -63,7 +63,7 @@ inspect-gateway: ## Open MCP Inspector for the gateway
 	@echo "Opening MCP Inspector for gateway"; \
 	echo "URL: http://mcp.127-0-0-1.sslip.io:$(KIND_HOST_PORT_MCP_GATEWAY)/mcp"; \
 	echo ""; \
-	MCP_AUTO_OPEN_ENABLED=false DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector@latest & \
+	MCP_AUTO_OPEN_ENABLED=false DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector@0.21.1 & \
 	sleep 2; \
 	$(open) "http://localhost:6274/?transport=streamable-http&serverUrl=http://mcp.127-0-0-1.sslip.io:$(KIND_HOST_PORT_MCP_GATEWAY)/mcp"; \
 	echo "Press Ctrl+C to stop and cleanup"; \
