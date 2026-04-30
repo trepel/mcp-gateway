@@ -44,4 +44,3 @@ spec:
       backendRefs:
         - name: mcp-gateway
           port: 8080
-          
