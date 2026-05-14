@@ -29,7 +29,7 @@ const (
 	GatewayNamespace    = "gateway-system"
 	GatewayName         = "mcp-gateway"
 	GatewayListenerName = "mcp" // listener name on mcp-gateway
-	MCPExtensionName    = "mcp-gateway"
+	MCPExtensionName    = "mcp-gateway-extension"
 	TestServerNameSpace = "mcp-test"
 	ReferenceGrantName  = "allow-mcp-gateway"
 )
@@ -60,8 +60,9 @@ const defaultE2EDomain = "127-0-0-1.sslip.io"
 
 // e2e environment configuration
 var (
-	e2eDomain = goenv.GetDefault("E2E_DOMAIN", defaultE2EDomain)
-	e2eScheme = goenv.GetDefault("E2E_SCHEME", "http")
+	e2eDomain        = goenv.GetDefault("E2E_DOMAIN", defaultE2EDomain)
+	e2eScheme        = goenv.GetDefault("E2E_SCHEME", "http")
+	gatewayClassName = goenv.GetDefault("GATEWAY_CLASS_NAME", "istio")
 )
 
 // public hosts - derived from E2E_DOMAIN

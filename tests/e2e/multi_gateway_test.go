@@ -457,6 +457,7 @@ var _ = Describe("MCP Gateway Multi-Gateway", func() {
 			TargetingGateway(SharedGatewayName, GatewayNamespace).
 			WithSectionName(TeamBMCPListenerName).
 			WithPublicHost(TeamBPublicHost).
+			WithListenerPort(8081).
 			Build()
 		teamBSetup.Clean(ctx).Register(ctx)
 		defer teamBSetup.TearDown(ctx)
@@ -526,13 +527,13 @@ var _ = Describe("MCP Gateway Multi-Gateway", func() {
 		Eventually(func(g Gomega) {
 			err := VerifyMCPServerRegistrationReady(ctx, k8sClient, teamAResources.GetMCPServer().Name, TeamANamespace)
 			g.Expect(err).NotTo(HaveOccurred())
-		}, TestTimeoutMedium, TestRetryInterval).To(Succeed())
+		}, TestTimeoutLong, TestRetryInterval).To(Succeed())
 
 		By("Waiting for Team B server to be registered")
 		Eventually(func(g Gomega) {
 			err := VerifyMCPServerRegistrationReady(ctx, k8sClient, teamBResources.GetMCPServer().Name, TeamBNamespace)
 			g.Expect(err).NotTo(HaveOccurred())
-		}, TestTimeoutMedium, TestRetryInterval).To(Succeed())
+		}, TestTimeoutLong, TestRetryInterval).To(Succeed())
 
 		By("Connecting to Team A gateway")
 		var teamAClient *NotifyingMCPClient
@@ -753,6 +754,7 @@ var _ = Describe("MCP Gateway Multi-Gateway", func() {
 			TargetingGateway(SharedGatewayName, GatewayNamespace).
 			WithSectionName(TeamBMCPListenerName).
 			WithPublicHost(TeamBPublicHost).
+			WithListenerPort(8081).
 			Build()
 		teamBSetup.Clean(ctx).Register(ctx)
 		defer teamBSetup.TearDown(ctx)

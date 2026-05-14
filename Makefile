@@ -74,6 +74,11 @@ MCP_GATEWAY_SUBDOMAIN ?= mcp
 MCP_GATEWAY_HOST ?= $(MCP_GATEWAY_SUBDOMAIN).127-0-0-1.sslip.io
 MCP_GATEWAY_NAME ?= mcp-gateway
 
+# E2E configuration variables
+E2E_DOMAIN ?= 127-0-0-1.sslip.io
+GATEWAY_CLASS_NAME ?= istio
+E2E_PLATFORM ?= kind
+
 .PHONY: help
 help: ## Display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -385,9 +390,20 @@ deploy-conformance-server: kind-load-conformance-server ## Deploy conformance MC
 	@echo "Waiting for MCPServerRegistration to be Ready..."
 	@kubectl wait --for=condition=Ready mcpsr/conformance-server -n mcp-test --timeout=120s
 
+# Generate e2e gateway configs from templates
+.PHONY: generate-e2e-config
+generate-e2e-config: ## Generate e2e gateway configs from templates (E2E_DOMAIN=..., GATEWAY_CLASS_NAME=..., E2E_PLATFORM=kind|openshift)
+	@echo "Generating e2e config with E2E_DOMAIN=$(E2E_DOMAIN), GATEWAY_CLASS_NAME=$(GATEWAY_CLASS_NAME), E2E_PLATFORM=$(E2E_PLATFORM)"
+	@export E2E_DOMAIN=$(E2E_DOMAIN) GATEWAY_CLASS_NAME=$(GATEWAY_CLASS_NAME) && \
+	  envsubst < config/e2e/gateway-1.yaml.template > config/e2e/gateway-1.yaml && \
+	  envsubst < config/e2e/gateway-2.yaml.template > config/e2e/gateway-2.yaml && \
+	  envsubst < config/e2e/gateway-shared.yaml.template > config/e2e/gateway-shared.yaml
+	@cp config/e2e/kustomization-$(E2E_PLATFORM).yaml config/e2e/kustomization.yaml
+	@echo "E2E config generated successfully"
+
 # Deploy e2e test gateways (two separate gateways for multi-gateway testing)
 .PHONY: deploy-e2e-gateways
-deploy-e2e-gateways: ## Deploy two gateways for e2e multi-gateway tests
+deploy-e2e-gateways: generate-e2e-config ## Deploy two gateways for e2e multi-gateway tests
 	@echo "Deploying e2e test gateways..."
 	kubectl apply -k config/e2e/
 	@echo "Waiting for e2e-1 to be programmed..."
@@ -395,6 +411,19 @@ deploy-e2e-gateways: ## Deploy two gateways for e2e multi-gateway tests
 	@echo "Waiting for e2e-2 to be programmed..."
 	@kubectl wait --for=condition=Programmed gateway/e2e-2 -n gateway-system --timeout=$(WAIT_TIME)
 	@echo "E2E gateways ready: e2e-1 (port 8004), e2e-2 (port 8003)"
+	@echo "Waiting for shared gateway to be programmed..."
+	@kubectl wait --for=condition=Programmed gateway/shared-gateway -n gateway-system --timeout=$(WAIT_TIME)
+	@echo "E2E gateways ready: e2e-1, e2e-2, and shared-gateway"
+
+# Deploy e2e gateways for OpenShift
+.PHONY: deploy-e2e-gateways-openshift
+deploy-e2e-gateways-openshift: ## Deploy e2e gateways for OpenShift (requires E2E_DOMAIN env var)
+	@if [ -z "$(E2E_DOMAIN)" ] || [ "$(E2E_DOMAIN)" = "127-0-0-1.sslip.io" ]; then \
+		echo "Error: E2E_DOMAIN must be set to your OpenShift cluster domain"; \
+		echo "Example: make deploy-e2e-gateways-openshift E2E_DOMAIN=apps.my-cluster.example.com"; \
+		exit 1; \
+	fi
+	$(MAKE) deploy-e2e-gateways E2E_DOMAIN=$(E2E_DOMAIN) GATEWAY_CLASS_NAME=openshift-default E2E_PLATFORM=openshift
 
 # Build and push container image TODO we have this and build-image lets just use one
 docker-build: ## Build container image locally
