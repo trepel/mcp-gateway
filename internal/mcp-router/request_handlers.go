@@ -665,7 +665,7 @@ func (s *ExtProcServer) initializeMCPSeverSession(ctx context.Context, mcpReq *M
 			}
 			passThroughHeaders["user-agent"] = "mcp-router"
 		}
-		s.Logger.DebugContext(ctx, "initializing target as no mcp-session-id found for client", "server ", mcpReq.serverName, "with passthrough headers", passThroughHeaders)
+		s.Logger.DebugContext(ctx, "initializing target as no mcp-session-id found for client", "server", mcpReq.serverName, "passthrough header count", len(passThroughHeaders))
 
 		// check if the original client declared elicitation support
 		if !mcpReq.clientElicitation {
@@ -714,7 +714,6 @@ func (s *ExtProcServer) initializeMCPSeverSession(ctx context.Context, mcpReq *M
 			sessionCloser()
 			return "", NewRouterError(404, fmt.Errorf("invalid session"))
 		}
-		time.AfterFunc(time.Until(expiresAt), sessionCloser)
 		remoteSessionID := clientHandle.GetSessionId()
 		s.Logger.DebugContext(ctx, "got remote session id ", "mcp server", mcpServerConfig.Name, "session", remoteSessionID)
 		{
@@ -732,10 +731,15 @@ func (s *ExtProcServer) initializeMCPSeverSession(ctx context.Context, mcpReq *M
 			storeSpan.End()
 			if storeErr != nil {
 				s.Logger.ErrorContext(ctx, "failed to add remote session to cache", "error", storeErr)
-				// again if this fails it is likely terminal due to a network connection error
+				// close the handle immediately; the timer is not yet armed so this is the only cleanup path
+				if cerr := clientHandle.Close(); cerr != nil {
+					s.Logger.DebugContext(ctx, "failed to close client connection on store error", "err", cerr)
+				}
 				return "", NewRouterError(500, fmt.Errorf("internal error"))
 			}
 		}
+		// arm the cleanup timer only after the session is safely recorded in the cache
+		time.AfterFunc(time.Until(expiresAt), sessionCloser)
 		return remoteSessionID, nil
 	})
 	if err != nil {
