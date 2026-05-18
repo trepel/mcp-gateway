@@ -1,5 +1,7 @@
 ## Test Cases
 
+> **Note:** Test cases reference default namespace names (`mcp-system`, `gateway-system`, `mcp-test`). These are configurable via environment variables (`SYSTEM_NAMESPACE`, `GATEWAY_NAMESPACE`, `TEST_SERVER_NAMESPACE`). See `README.md` for configuration details.
+
 
 ### [Happy] Test registering multiple MCP servers with the gateway
 
@@ -54,7 +56,7 @@
 
 ### [Full] Redis session cache persists backend sessions across pod restarts
 
-- When the MCP Gateway is configured with a Redis session cache, backend MCP sessions should survive pod restarts. Redis is already deployed in the mcp-system namespace as part of CI setup. With a single gateway replica, create a secret in the system namespace with a `CACHE_CONNECTION_STRING` key containing the Redis connection string and label `mcp.kuadrant.io/secret: "true"`. Register an MCPServerRegistration and wait for tools to be available. Then enable Redis by patching the MCPGatewayExtension to set `sessionStore.secretName` referencing the Redis secret and waiting for the deployment rollout to complete. Using a raw HTTP client (not the MCP client library), send an `initialize` request to obtain a session ID, then send `notifications/initialized`, then call the `headers` tool to establish a backend session and capture the backend `Mcp-Session-Id` from the response content. Then trigger a rollout restart of the mcp-gateway deployment and wait for the new rollout to complete. After the new pod is running, call the `headers` tool again using the same raw HTTP session ID and verify the same backend `Mcp-Session-Id` is returned, proving the session was retrieved from Redis. Cleanup should remove the `sessionStore` from the MCPGatewayExtension spec and delete the Redis secret. Do not deploy or delete Redis in the test itself.
+- When the MCP Gateway is configured with a Redis session cache, backend MCP sessions should survive pod restarts. Redis is already deployed in the system namespace (default: mcp-system, configurable via `SYSTEM_NAMESPACE` env var) as part of CI setup. With a single gateway replica, create a secret in the system namespace with a `CACHE_CONNECTION_STRING` key containing the Redis connection string and label `mcp.kuadrant.io/secret: "true"`. Register an MCPServerRegistration and wait for tools to be available. Then enable Redis by patching the MCPGatewayExtension to set `sessionStore.secretName` referencing the Redis secret and waiting for the deployment rollout to complete. Using a raw HTTP client (not the MCP client library), send an `initialize` request to obtain a session ID, then send `notifications/initialized`, then call the `headers` tool to establish a backend session and capture the backend `Mcp-Session-Id` from the response content. Then trigger a rollout restart of the mcp-gateway deployment and wait for the new rollout to complete. After the new pod is running, call the `headers` tool again using the same raw HTTP session ID and verify the same backend `Mcp-Session-Id` is returned, proving the session was retrieved from Redis. Cleanup should remove the `sessionStore` from the MCPGatewayExtension spec and delete the Redis secret. Do not deploy or delete Redis in the test itself.
 
 ### [Full] Gracefully handle an MCP Server becoming unavailable
 

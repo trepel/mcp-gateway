@@ -112,7 +112,7 @@ var _ = Describe("MCP Gateway Multi-Gateway", func() {
 	})
 
 	It("[Happy] MCPGatewayExtension cross-namespace reference requires ReferenceGrant", func() {
-		// Note: The existing MCPGatewayExtension in mcp-system already owns the gateway.
+		// Note: The existing MCPGatewayExtension in SystemNamespace (mcp-system) already owns the gateway.
 		// After adding a ReferenceGrant, this MCPGatewayExtension will get a conflict status
 		// because only one MCPGatewayExtension can own a gateway (the oldest one wins).
 		By("Creating an MCPGatewayExtension in mcp-test namespace targeting Gateway in gateway-system without ReferenceGrant")
@@ -136,7 +136,7 @@ var _ = Describe("MCP Gateway Multi-Gateway", func() {
 		testResources = append(testResources, refGrant)
 		Expect(k8sClient.Create(ctx, refGrant)).To(Succeed())
 
-		By("Verifying MCPGatewayExtension gets conflict status (existing mcp-system MCPGatewayExtension owns the gateway)")
+		By("Verifying MCPGatewayExtension gets conflict status (existing mcp-system-extension MCPGatewayExtension owns the gateway)")
 		Eventually(func(g Gomega) {
 			err := VerifyMCPGatewayExtensionNotReadyWithReason(ctx, k8sClient, mcpExt.Name, mcpExt.Namespace, "Invalid")
 			g.Expect(err).NotTo(HaveOccurred())

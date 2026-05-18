@@ -12,7 +12,13 @@
 // from the public hostnames automatically (e.g. http://mcp.<domain>/mcp) instead
 // of using Kind's localhost port mappings.
 //
-// Individual overrides are also available:
+// Namespace overrides (for non-standard installations):
+//
+//   SYSTEM_NAMESPACE       - MCP system namespace (default: mcp-system)
+//   GATEWAY_NAMESPACE      - Gateway namespace (default: gateway-system)
+//   TEST_SERVER_NAMESPACE  - Test server namespace (default: mcp-test)
+//
+// Individual gateway/host overrides:
 //
 //   GATEWAY_URL, GATEWAY_PUBLIC_HOST
 //   E2E1_GATEWAY_URL, E2E1_PUBLIC_HOST

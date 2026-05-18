@@ -22,15 +22,12 @@ const (
 	TestRetryInterval     = time.Second * 5
 )
 
-// Namespace constants
+// Namespace and resource name constants
 const (
-	SystemNamespace     = "mcp-system"
 	ConfigMapName       = "mcp-gateway-config"
-	GatewayNamespace    = "gateway-system"
 	GatewayName         = "mcp-gateway"
 	GatewayListenerName = "mcp" // listener name on mcp-gateway
 	MCPExtensionName    = "mcp-gateway-extension"
-	TestServerNameSpace = "mcp-test"
 	ReferenceGrantName  = "allow-mcp-gateway"
 )
 
@@ -63,6 +60,13 @@ var (
 	e2eDomain        = goenv.GetDefault("E2E_DOMAIN", defaultE2EDomain)
 	e2eScheme        = goenv.GetDefault("E2E_SCHEME", "http")
 	gatewayClassName = goenv.GetDefault("GATEWAY_CLASS_NAME", "istio")
+)
+
+// namespace configuration - configurable via environment variables
+var (
+	SystemNamespace     = goenv.GetDefault("SYSTEM_NAMESPACE", "mcp-system")
+	GatewayNamespace    = goenv.GetDefault("GATEWAY_NAMESPACE", "gateway-system")
+	TestServerNameSpace = goenv.GetDefault("TEST_SERVER_NAMESPACE", "mcp-test")
 )
 
 // public hosts - derived from E2E_DOMAIN
