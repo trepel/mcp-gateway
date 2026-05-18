@@ -410,7 +410,6 @@ deploy-e2e-gateways: generate-e2e-config ## Deploy two gateways for e2e multi-ga
 	@kubectl wait --for=condition=Programmed gateway/e2e-1 -n gateway-system --timeout=$(WAIT_TIME)
 	@echo "Waiting for e2e-2 to be programmed..."
 	@kubectl wait --for=condition=Programmed gateway/e2e-2 -n gateway-system --timeout=$(WAIT_TIME)
-	@echo "E2E gateways ready: e2e-1 (port 8004), e2e-2 (port 8003)"
 	@echo "Waiting for shared gateway to be programmed..."
 	@kubectl wait --for=condition=Programmed gateway/shared-gateway -n gateway-system --timeout=$(WAIT_TIME)
 	@echo "E2E gateways ready: e2e-1, e2e-2, and shared-gateway"
