@@ -14,7 +14,7 @@
 //
 // Namespace overrides (for non-standard installations):
 //
-//   SYSTEM_NAMESPACE       - MCP system namespace (default: mcp-system)
+//   MCP_GATEWAY_NAMESPACE  - MCP system namespace (default: mcp-system)
 //   GATEWAY_NAMESPACE      - Gateway namespace (default: gateway-system)
 //   TEST_SERVER_NAMESPACE  - Test server namespace (default: mcp-test)
 //

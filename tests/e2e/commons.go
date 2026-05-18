@@ -64,7 +64,7 @@ var (
 
 // namespace configuration - configurable via environment variables
 var (
-	SystemNamespace     = goenv.GetDefault("SYSTEM_NAMESPACE", "mcp-system")
+	SystemNamespace     = goenv.GetDefault("MCP_GATEWAY_NAMESPACE", "mcp-system")
 	GatewayNamespace    = goenv.GetDefault("GATEWAY_NAMESPACE", "gateway-system")
 	TestServerNameSpace = goenv.GetDefault("TEST_SERVER_NAMESPACE", "mcp-test")
 )
