@@ -145,6 +145,7 @@ spec:
                   prefix is the prefix to add to all federated capabilities from referenced servers.
                   This helps avoid naming conflicts when aggregating tools from multiple sources.
                   For example, if two servers both provide a 'search' tool, prefixes like 'server1_' and 'server2_' ensure they can coexist as 'server1_search' and 'server2_search'.
+                pattern: ^[a-z0-9][a-z0-9_]*$
                 type: string
                 x-kubernetes-validations:
                 - message: prefix is immutable once set

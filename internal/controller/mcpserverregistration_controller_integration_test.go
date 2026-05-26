@@ -936,4 +936,40 @@ var _ = Describe("MCPServerRegistration Controller", func() {
 			}, testTimeout, testRetryInterval).Should(Succeed())
 		})
 	})
+
+	Context("prefix field CRD validation", func() {
+		ctx := context.Background()
+
+		AfterEach(func() {
+			forceDeleteTestMCPServerRegistration(ctx, "prefix-valid", "default")
+		})
+
+		DescribeTable("rejects invalid prefix values",
+			func(prefix string) {
+				mcpsr := createTestMCPServerRegistration("prefix-invalid", "default", "some-route", prefix)
+				err := testK8sClient.Create(ctx, mcpsr)
+				Expect(err).To(HaveOccurred())
+				Expect(errors.IsInvalid(err)).To(BeTrue(), "expected Invalid error, got: %v", err)
+			},
+			Entry("uppercase letters", "MyServer_"),
+			Entry("hyphen", "my-server"),
+			Entry("starts with underscore", "_test1"),
+			Entry("space", "my server"),
+			Entry("special characters", "test!@#"),
+			Entry("mixed case", "testServer"),
+		)
+
+		DescribeTable("accepts valid prefix values",
+			func(prefix string) {
+				mcpsr := createTestMCPServerRegistration("prefix-valid", "default", "some-route", prefix)
+				Expect(testK8sClient.Create(ctx, mcpsr)).To(Succeed())
+				forceDeleteTestMCPServerRegistration(ctx, "prefix-valid", "default")
+			},
+			Entry("lowercase with trailing underscore", "test_"),
+			Entry("alphanumeric with underscore", "server1_"),
+			Entry("single letter", "a"),
+			Entry("digits and underscores", "s1_prefix_"),
+			Entry("all lowercase", "weatherserver"),
+		)
+	})
 })

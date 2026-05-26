@@ -60,6 +60,7 @@ type MCPServerRegistrationSpec struct {
 	// For example, if two servers both provide a 'search' tool, prefixes like 'server1_' and 'server2_' ensure they can coexist as 'server1_search' and 'server2_search'.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="prefix is immutable once set"
+	// +kubebuilder:validation:Pattern=`^[a-z0-9][a-z0-9_]*$`
 	Prefix string `json:"prefix,omitempty"`
 
 	// path specifies the URL path where the MCP server endpoint is exposed.

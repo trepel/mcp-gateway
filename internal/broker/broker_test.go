@@ -77,7 +77,7 @@ func TestOnConfigChange(t *testing.T) {
 	server1 := &config.MCPServer{
 		Name:   "test1",
 		URL:    MCPAddr,
-		Prefix: "_test1",
+		Prefix: "test1_",
 	}
 	virtualServer1 := &config.VirtualServer{
 		Name:  "test/test",

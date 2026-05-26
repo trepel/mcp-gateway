@@ -430,3 +430,4 @@ myprompt
 promptname
 rescope
 selfsigned
+weatherserver
