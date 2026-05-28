@@ -218,9 +218,7 @@ var _ = Describe("HTTPS External Backends", func() {
 
 	It("[HTTPS] [Happy] External GitHub MCP server discovers tools over public TLS", func() {
 		pat := os.Getenv("GITHUB_MCP_PAT")
-		if pat == "" {
-			Skip("Skipping: GITHUB_MCP_PAT environment variable not set")
-		}
+		Expect(pat).NotTo(BeEmpty(), "GITHUB_MCP_PAT environment variable must be set")
 
 		By("Creating a Secret containing the GitHub PAT")
 		patSecret := &corev1.Secret{
