@@ -15,23 +15,33 @@ const (
 )
 
 func (m *mcpBrokerImpl) registerTagsTools() {
-	m.listeningMCPServer.AddTool(
-		mcp.NewTool(listTagsName,
-			mcp.WithDescription("List all tags across registered MCP servers"),
+	listTags := mcp.NewTool(listTagsName,
+		mcp.WithDescription("List all tags across registered MCP servers"),
+	)
+	listTags.Meta = mcp.NewMetaFromMap(map[string]any{
+		brokerToolMetaKey: true,
+	})
+
+	filterByTags := mcp.NewTool(filterToolsByTagsName,
+		mcp.WithDescription("Return tools available through the gateway that match all of the given tags"),
+		mcp.WithArray("tags",
+			mcp.Description("list of tags to filter by (must not be empty)"),
+			mcp.Required(),
 		),
+	)
+	filterByTags.Meta = mcp.NewMetaFromMap(map[string]any{
+		brokerToolMetaKey: true,
+	})
+
+	m.listeningMCPServer.AddTool(
+		listTags,
 		func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			return m.handleListTags(req)
 		},
 	)
 
 	m.listeningMCPServer.AddTool(
-		mcp.NewTool(filterToolsByTagsName,
-			mcp.WithDescription("Return tools available through the gateway that match all of the given tags"),
-			mcp.WithArray("tags",
-				mcp.Description("list of tags to filter by (must not be empty)"),
-				mcp.Required(),
-			),
-		),
+		filterByTags,
 		func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			return m.handleFilterToolsByTags(req)
 		},
@@ -127,7 +137,7 @@ func (m *mcpBrokerImpl) handleFilterToolsByTags(req mcp.CallToolRequest) (*mcp.C
 }
 
 // syncTagsTools registers or deregisters list_tags/filter_tools_by_tags based on
-// whether any server in the current config has tags. Caller must hold mcpLock.
+// whether any server in the current config has tags.
 func (m *mcpBrokerImpl) syncTagsTools(ctx context.Context, servers []*config.MCPServer) {
 	hasTags := false
 	for _, s := range servers {

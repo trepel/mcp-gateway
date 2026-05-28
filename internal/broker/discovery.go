@@ -35,15 +35,25 @@ To avoid loading all tool schemas upfront, use the discovery tools:
 3. To change scope, call select_tools again with a new set. Pass an empty list to reset to the full tool set.`
 )
 
-// isBrokerToolName returns true if the name is a broker-internal meta-tool.
+// isBrokerToolName returns true if the name is a statically-registered broker meta-tool.
 func isBrokerToolName(name string) bool {
-	return name == discoverToolsName || name == selectToolsName ||
-		name == listTagsName || name == filterToolsByTagsName
+	return name == discoverToolsName || name == selectToolsName
 }
 
-// IsBrokerTool returns true if the given tool is a broker-internal meta-tool.
+// IsBrokerTool returns true if the given tool is a broker-internal meta-tool,
+// either by name (static tools) or by meta annotation (dynamic tools like tags).
 func IsBrokerTool(tool mcp.Tool) bool {
-	return isBrokerToolName(tool.Name)
+	if isBrokerToolName(tool.Name) {
+		return true
+	}
+	if tool.Meta != nil {
+		if v, ok := tool.Meta.AdditionalFields[brokerToolMetaKey]; ok {
+			if b, ok := v.(bool); ok && b {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // discoveryConfig holds discovery feature configuration
