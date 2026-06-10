@@ -22,6 +22,7 @@ import (
 	"flag"
 	"log/slog"
 	"os"
+	"strconv"
 
 	"github.com/go-logr/logr"
 
@@ -123,6 +124,13 @@ func main() {
 
 	brokerRouterImage := goenv.GetDefault("RELATED_IMAGE_ROUTER_BROKER", controller.DefaultBrokerRouterImage)
 	brokerRouterLogLevel := goenv.GetDefault("BROKER_ROUTER_LOG_LEVEL", "")
+	// the broker parses --log-level as an integer, so a bad value here would
+	// crash-loop the data plane rather than the controller; fail fast instead
+	if brokerRouterLogLevel != "" {
+		if _, err := strconv.Atoi(brokerRouterLogLevel); err != nil {
+			panic("invalid BROKER_ROUTER_LOG_LEVEL " + strconv.Quote(brokerRouterLogLevel) + " : must be an integer")
+		}
+	}
 
 	if err = (&controller.MCPGatewayExtensionReconciler{
 		Client:                mgr.GetClient(),
