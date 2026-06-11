@@ -85,7 +85,7 @@ Use codebase-memory-mcp to index and explore the project when available.
 
 ## Contributing
 
-Read `CONTRIBUTING.md` before creating PRs or issues. Every PR must reference an existing issue.
+Read `CONTRIBUTING.md` before creating PRs or issues. Feature, planned or speculative work requires an existing issue; bugfixes and security patches are exempt.
 
 ## Reference
 
