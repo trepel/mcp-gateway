@@ -15,7 +15,7 @@ Parse the version to determine:
 - **Final release**: no suffix (e.g., `0.6.0`)
 - **Patch release**: patch > 0 and no suffix (e.g., `0.6.1`)
 
-Extract the major.minor.patch for the release branch name (`release-X.Y.Z`).
+Extract the major.minor for the release branch name (`release-X.Y`).
 
 ## Remote layout
 
@@ -61,21 +61,21 @@ git fetch upstream
 
 Check if the release branch exists on upstream:
 ```bash
-git ls-remote --heads upstream release-X.Y.Z
+git ls-remote --heads upstream release-X.Y
 ```
 
 **If it exists**, check it out and create the working branch:
 ```bash
-git checkout release-X.Y.Z
-git pull upstream release-X.Y.Z
+git checkout release-X.Y
+git pull upstream release-X.Y
 git checkout -b release-{VERSION}
 ```
 
 **If it does not exist** (new minor release), tell the user:
 
-> The release branch `release-X.Y.Z` doesn't exist on upstream yet. Create it via the GitHub UI:
+> The release branch `release-X.Y` doesn't exist on upstream yet. Create it via the GitHub UI:
 > 1. Go to https://github.com/Kuadrant/mcp-gateway
-> 2. Click the branch dropdown, type `release-X.Y.Z`, and select **Create branch: release-X.Y.Z from main**
+> 2. Click the branch dropdown, type `release-X.Y`, and select **Create branch: release-X.Y from main**
 >
 > Let me know when that's done and I'll continue.
 
@@ -117,9 +117,9 @@ STOP here. Do not push. Do not create a PR. Tell the user:
 > git push -u origin release-{VERSION}
 > ```
 >
-> Then create a PR targeting the `release-X.Y.Z` branch on Kuadrant/mcp-gateway:
+> Then create a PR targeting the `release-X.Y` branch on Kuadrant/mcp-gateway:
 > ```
-> gh pr create --repo Kuadrant/mcp-gateway --base release-X.Y.Z \
+> gh pr create --repo Kuadrant/mcp-gateway --base release-X.Y \
 >   --title "Update version to {VERSION}" \
 >   --body "Version bump for {VERSION} release."
 > ```
@@ -131,7 +131,7 @@ Wait for the user to confirm the PR is merged before proceeding to the next step
 Tell the user to create the release:
 1. Go to https://github.com/Kuadrant/mcp-gateway/releases
 2. Click **Draft a new release**
-3. Click **Choose a tag**, create tag `v{VERSION}`, target the `release-X.Y.Z` branch
+3. Click **Choose a tag**, create tag `v{VERSION}`, target the `release-X.Y` branch
 4. Set title to `v{VERSION}`
 5. Click **Generate release notes**
 6. For RCs: check **Set as a pre-release**
@@ -161,6 +161,7 @@ helm show chart oci://ghcr.io/kuadrant/charts/mcp-gateway --version ${VERSION} >
 Skip this step for RC releases.
 
 For final releases, main needs a version bump so docs and scripts reference the latest release.
+Docs on main are published to docs.kuadrant.io, so version references must point to the latest released version.
 
 ```bash
 git checkout main && git pull upstream main
