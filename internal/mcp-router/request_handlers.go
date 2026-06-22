@@ -225,11 +225,22 @@ func (mr *MCPRequest) ToBytes() ([]byte, error) {
 }
 
 // HandleRequestHeaders handles request headers minimally.
-func (s *ExtProcServer) HandleRequestHeaders(ctx context.Context, _ *eppb.HttpHeaders) ([]*eppb.ProcessingResponse, error) {
+func (s *ExtProcServer) HandleRequestHeaders(ctx context.Context, headers *eppb.HttpHeaders) ([]*eppb.ProcessingResponse, error) {
 	s.Logger.DebugContext(ctx, "Request Handler: HandleRequestHeaders called")
 	requestHeaders := NewHeaders()
 	response := NewResponse()
 	requestHeaders.WithAuthority(s.RoutingConfig.MCPGatewayExternalHostname)
+	// Trust model: ExtractSubClaim only decodes the JWT payload, it does NOT
+	// verify the signature. That is safe here because AuthPolicy validates the
+	// Authorization JWT before the request reaches ext_proc, so by this point
+	// the token is already trusted. We surface the verified sub as the internal
+	// x-mcp-verified-sub header so the broker can bind token submissions to an
+	// identity without re-parsing the raw token. The header is in
+	// internalOnlyHeaders, so any client-supplied value is stripped first.
+	authHeader := getSingleValueHeader(headers.GetHeaders(), authorizationHeader)
+	if sub, _ := internaljwt.ExtractSubClaim(authHeader); sub != "" {
+		requestHeaders.WithVerifiedSub(sub)
+	}
 	return response.WithRequestHeadersResponse(requestHeaders.Build(), internalOnlyHeaders...).Build(), nil
 }
 
