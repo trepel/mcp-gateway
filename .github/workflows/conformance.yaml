@@ -92,21 +92,39 @@ jobs:
       - name: Deploy conformance server
         run: make deploy-conformance-server
 
+
       - name: Wait for conformance server to get ready
         run: |
           echo "Waiting for Gateway to wire up the MCP routes and broker to fetch tools..."
+          # wait for the gateway route to be active (non-502/503)
           for i in {1..30}; do
             HTTP_STATUS=$(curl --max-time 2 -s -o /dev/null -w "%{http_code}" ${{ env.MCP_URL }} || echo "000")
             if [[ "$HTTP_STATUS" != "000" && "$HTTP_STATUS" != "0" && "$HTTP_STATUS" != "502" && "$HTTP_STATUS" != "503" ]]; then
               echo "Gateway route is active! HTTP Status: $HTTP_STATUS"
-              # Extra wait for broker to connect and fetch tools from the conformance server
-              sleep 10
               break
             fi
             echo "Attempt $i/30: Gateway route not ready yet (Status: $HTTP_STATUS). Retrying in 2 seconds..."
             sleep 2
             if [ $i -eq 30 ]; then
               echo "ERROR: Gateway routes failed to propagate after 60 seconds."
+              exit 1
+            fi
+          done
+          # poll the broker /status endpoint until the conformance server has tools.
+          # the controller writes config on Ready, but the broker needs kubelet
+          # volume sync + upstream connection before tools are available.
+          echo "Waiting for broker to discover conformance server tools..."
+          STATUS_URL="${MCP_URL%/mcp}/status"
+          for i in {1..60}; do
+            TOOLS=$(curl --max-time 5 -s "$STATUS_URL" | grep -o '"totalTools":[0-9]*' | head -1 | cut -d: -f2)
+            if [ -n "$TOOLS" ] && [ "$TOOLS" -gt 0 ] 2>/dev/null; then
+              echo "Broker has $TOOLS tools from conformance server."
+              break
+            fi
+            sleep 2
+            if [ $i -eq 60 ]; then
+              echo "ERROR: Broker failed to discover tools after 120 seconds."
+              curl -s "$STATUS_URL" || true
               exit 1
             fi
           done
@@ -136,5 +154,9 @@ jobs:
         if: failure()
         run: |
           make ci-debug-logs
+          echo "=== Broker/Router logs ==="
+          kubectl logs -n mcp-system -l app.kubernetes.io/name=mcp-gateway --tail=200 || true
           echo "=== Conformance server logs ==="
           kubectl logs -n mcp-test deployment/conformance-server --tail=50
+          echo "=== Envoy access logs ==="
+          kubectl logs -n gateway-system -l app=mcp-gateway-istio --tail=100 | grep -i "mcp\|POST\|status" || true

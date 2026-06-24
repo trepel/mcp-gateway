@@ -129,6 +129,7 @@ func (mcpServer *MCPServer) ConfigChanged(existingConfig MCPServer) bool {
 		existingConfig.Credential != mcpServer.Credential ||
 		existingConfig.CACert != mcpServer.CACert ||
 		normalizeState(existingConfig.State) != normalizeState(mcpServer.State) ||
+		existingConfig.UserSpecificList != mcpServer.UserSpecificList ||
 		existingConfig.Hint != mcpServer.Hint ||
 		tokenURLElicitationChanged(mcpServer.TokenURLElicitation, existingConfig.TokenURLElicitation) {
 		return true
