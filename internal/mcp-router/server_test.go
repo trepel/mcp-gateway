@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/Kuadrant/mcp-gateway/internal/config"
@@ -528,22 +529,23 @@ func newTestServer(t *testing.T) *ExtProcServer {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	cache, err := session.NewCache()
 	require.NoError(t, err)
-	return &ExtProcServer{
+	server := &ExtProcServer{
 		Logger:       logger,
 		SessionCache: cache,
 		Broker:       newMockBroker(nil, map[string]string{}),
-		RoutingConfig: &config.MCPServersConfig{
-			Servers: []*config.MCPServer{
-				{
-					Name:     "dummy",
-					URL:      "http://localhost:9090",
-					Prefix:   "",
-					State:    "Enabled",
-					Hostname: "dummy",
-				},
+	}
+	server.RoutingConfig.Store(&config.MCPServersConfig{
+		Servers: []*config.MCPServer{
+			{
+				Name:     "dummy",
+				URL:      "http://localhost:9090",
+				Prefix:   "",
+				State:    "Enabled",
+				Hostname: "dummy",
 			},
 		},
-	}
+	})
+	return server
 }
 
 // requestHeadersStep returns a standard request headers step
@@ -783,4 +785,50 @@ func requireMatchingHTTPStatus(t *testing.T, expected, actual *typev3.HttpStatus
 	require.NotNil(t, expected, "actual HTTP status is %d", actual.Code)
 	require.NotNil(t, actual)
 	require.Equal(t, expected.Code, actual.Code)
+}
+
+// TestExtProcServer_OnConfigChange_DataRace exercises a config-reload landing
+// concurrently with a request-handler read of RoutingConfig. The race detector
+// is the assertion; run with go test -race ./internal/mcp-router/...
+func TestExtProcServer_OnConfigChange_DataRace(t *testing.T) {
+	server := &ExtProcServer{
+		Logger: slog.Default(),
+	}
+	server.RoutingConfig.Store(&config.MCPServersConfig{
+		MCPGatewayExternalHostname: "initial.gateway",
+	})
+
+	const iterations = 5000
+
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+
+	// reader: invoke a handler that reads RoutingConfig.Load() on the hot path
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-start
+		for range iterations {
+			if _, err := server.HandleRequestHeaders(context.Background(), nil); err != nil {
+				t.Errorf("HandleRequestHeaders returned error during race exercise: %v", err)
+				return
+			}
+		}
+	}()
+
+	// writer: mirror OnConfigChange firing repeatedly from viper fsnotify
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-start
+		for range iterations {
+			server.OnConfigChange(context.Background(), &config.MCPServersConfig{
+				MCPGatewayExternalHostname: "replacement.gateway",
+			})
+		}
+	}()
+
+	// release both goroutines together for deterministic concurrent exercise of Load/Store
+	close(start)
+	wg.Wait()
 }
