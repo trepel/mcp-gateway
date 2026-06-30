@@ -275,4 +275,3 @@ type MCPVirtualServerList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []MCPVirtualServer `json:"items"`
 }
-

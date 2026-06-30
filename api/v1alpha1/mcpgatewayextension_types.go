@@ -280,7 +280,6 @@ type MCPGatewayExtensionTargetReference struct {
 	SectionName string `json:"sectionName,omitempty"`
 }
 
-
 // SetReadyCondition sets the Ready condition on the MCPGatewayExtension status
 func (m *MCPGatewayExtension) SetReadyCondition(status metav1.ConditionStatus, reason, message string) {
 	meta.SetStatusCondition(&m.Status.Conditions, metav1.Condition{
