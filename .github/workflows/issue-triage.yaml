@@ -5,10 +5,8 @@ on:
     types:
       [opened, reopened, edited, labeled, unlabeled, milestoned, demilestoned, closed]
 
-permissions: read-all
-
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
 
 jobs:
   triage:
@@ -30,7 +28,7 @@ jobs:
             const issueNumber = issue.number;
             const hasMilestone = !!issue.milestone;
             const currentLabels = issue.labels.map(label => label.name);
-            const action = context.payload.action;
+            let action = context.payload.action;
             const eventLabel = context.payload.label ? context.payload.label.name : null;
 
             // ------------------------------------------------------
@@ -84,7 +82,21 @@ jobs:
                 state: 'closed',
                 state_reason: 'not_planned'
               });
-              return;
+              
+              // Queue stale labels for removal
+              getLabelsStartingWith('triage/').forEach(label => {
+                if (label !== 'triage/declined') {
+                  labelsToRemove.push(label);
+                  console.log(`Issue declined -> removing stale label ${label}`);
+                }
+              });
+              getLabelsStartingWith('priority/').forEach(label => {
+                labelsToRemove.push(label);
+                console.log(`Issue declined -> removing stale label ${label}`);
+              });
+              
+              // Prevent milestone logic from running
+              action = 'closed';
             }
 
 
