@@ -316,6 +316,18 @@ func (b *TestResourcesBuilder) Build() *TestResourcesBuilder {
 	return b
 }
 
+// buildHostnames constructs the hostname slice based on cluster type (KIND vs OpenShift)
+func (b *TestResourcesBuilder) buildHostnames() []gatewayapiv1.Hostname {
+	if e2eDomain == defaultE2EDomain {
+		// KIND: use .mcp-gateway.local hostname only
+		return []gatewayapiv1.Hostname{gatewayapiv1.Hostname(b.hostname)}
+	}
+	// OpenShift/real clusters: use real domain hostname only
+	return []gatewayapiv1.Hostname{
+		gatewayapiv1.Hostname(strings.Replace(b.hostname, ".mcp-gateway.local", "."+e2eDomain, 1)),
+	}
+}
+
 func (b *TestResourcesBuilder) buildInternalResources(routeName string) {
 	backendRef := gatewayapiv1.BackendObjectReference{
 		Name: gatewayapiv1.ObjectName(b.serviceName),
@@ -369,10 +381,7 @@ func (b *TestResourcesBuilder) buildInternalResources(routeName string) {
 			CommonRouteSpec: gatewayapiv1.CommonRouteSpec{
 				ParentRefs: []gatewayapiv1.ParentReference{parentRef},
 			},
-			Hostnames: []gatewayapiv1.Hostname{
-				gatewayapiv1.Hostname(b.hostname),
-				gatewayapiv1.Hostname(strings.Replace(b.hostname, ".mcp-gateway.local", "."+e2eDomain, 1)),
-			},
+			Hostnames: b.buildHostnames(),
 			Rules: []gatewayapiv1.HTTPRouteRule{
 				{
 					BackendRefs: []gatewayapiv1.HTTPBackendRef{
@@ -448,9 +457,7 @@ func (b *TestResourcesBuilder) buildExternalResources(routeName string) {
 			CommonRouteSpec: gatewayapiv1.CommonRouteSpec{
 				ParentRefs: []gatewayapiv1.ParentReference{parentRef},
 			},
-			Hostnames: []gatewayapiv1.Hostname{
-				gatewayapiv1.Hostname(b.hostname),
-			},
+			Hostnames: b.buildHostnames(),
 			Rules: []gatewayapiv1.HTTPRouteRule{
 				{
 					Matches: []gatewayapiv1.HTTPRouteMatch{

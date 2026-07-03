@@ -184,6 +184,9 @@ var _ = Describe("Tool Discovery", func() {
 				g.Expect(VerifyMCPServerRegistrationReady(ctx, k8sClient, server.Name, server.Namespace)).To(Succeed())
 			}, TestTimeoutLong, TestRetryInterval).Should(Succeed())
 
+			By("waiting for tools to appear via gateway")
+			WaitForToolsWithPrefix(ctx, mcpGatewayClient, "discauth_")
+
 			By("creating a JWT that allows only one tool")
 			allowedTools := map[string][]string{
 				fmt.Sprintf("%s/%s", server.Namespace, server.Name): {"hello_world"},

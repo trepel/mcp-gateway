@@ -6,17 +6,32 @@
 // and 127-0-0-1.sslip.io hostnames. To run against a real cluster, set:
 //
 //   E2E_DOMAIN    - base domain for all public hostnames (default: 127-0-0-1.sslip.io)
+//                   Also configures the Gateway HTTPS listener hostname as *.<domain>
 //   E2E_SCHEME    - http or https (default: http)
 //
-// Setting E2E_DOMAIN to a non-default value causes gateway URLs to be derived
-// from the public hostnames automatically (e.g. http://mcp.<domain>/mcp) instead
-// of using Kind's localhost port mappings.
+// Setting E2E_DOMAIN to a non-default value causes:
+// - Gateway URLs to be derived from public hostnames (e.g. http://mcp.<domain>/mcp)
+// - Gateway HTTPS listener hostname to use *.<domain> instead of *.mcp-gateway.local
+// - Individual server hostnames to use <name>.<domain> instead of <name>.mcp-gateway.local
 //
 // Namespace overrides (for non-standard installations):
 //
 //   MCP_GATEWAY_NAMESPACE  - MCP system namespace (default: mcp-system)
 //   GATEWAY_NAMESPACE      - Gateway namespace (default: gateway-system)
 //   TEST_SERVER_NAMESPACE  - Test server namespace (default: mcp-test)
+//
+// TLS configuration:
+//
+//   GATEWAY_TLS_SECRET           - Secret name for Gateway HTTPS listener certificate
+//                                  (default: mcp-gateway-tls-cert).
+//                                  Certificate must be valid for:
+//                                    - listener hostname (*.<domain>)
+//   GATEWAY_CA_BUNDLE_CONFIGMAP  - ConfigMap name containing CA certificates for broker to trust
+//                                  the Gateway HTTPS listener certificate (default: trusted-ca-bundle).
+//                                  Required when Gateway uses certificates signed by non-standard CAs
+//                                  (self-signed, internal CA, etc.). On Kind, uses cert-manager's
+//                                  private CA. On OpenShift/real clusters, typically uses the
+//                                  platform's trusted CA bundle.
 //
 // Individual gateway/host overrides:
 //
@@ -142,7 +157,7 @@ var _ = BeforeSuite(func() {
 
 	By("adding HTTPS listener to the gateway")
 	Expect(AddGatewayHTTPSListener(ctx, GatewayNamespace, GatewayName,
-		GatewayListenerName, "*.mcp-gateway.local", "mcp-gateway-tls-cert", 8443)).To(Succeed())
+		GatewayListenerName, gatewayListenerHostname(), GatewayTLSSecret, 8443)).To(Succeed())
 
 	By("setting up MCPGatewayExtension with ReferenceGrant")
 	defaultMCPGatewayExt = NewMCPGatewayExtensionSetup(k8sClient).
@@ -176,29 +191,41 @@ var _ = BeforeSuite(func() {
 	}, TestTimeoutLong, TestRetryInterval).Should(Succeed())
 
 	By("patching broker-router: CA cert for HTTPS listener")
-	caSecret := &corev1.Secret{}
-	Expect(k8sClient.Get(ctx, client.ObjectKey{Name: "private-ca-keypair", Namespace: "cert-manager"}, caSecret)).To(Succeed())
-	caCertPEM, ok := caSecret.Data["ca.crt"]
-	Expect(ok).To(BeTrue(), "private-ca-keypair should have ca.crt")
+	if e2eDomain == defaultE2EDomain {
+		// KIND: use private-ca-keypair secret
+		caSecret := &corev1.Secret{}
+		Expect(k8sClient.Get(ctx, client.ObjectKey{Name: "private-ca-keypair", Namespace: "cert-manager"}, caSecret)).To(Succeed())
+		caCertPEM, ok := caSecret.Data["ca.crt"]
+		Expect(ok).To(BeTrue(), "private-ca-keypair should have ca.crt")
 
-	caBundle := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gateway-ca-bundle",
-			Namespace: SystemNamespace,
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{"ca.crt": caCertPEM},
+		caBundle := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gateway-ca-bundle",
+				Namespace: SystemNamespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{"ca.crt": caCertPEM},
+		}
+		_ = k8sClient.Delete(ctx, caBundle)
+		Expect(k8sClient.Create(ctx, caBundle)).To(Succeed())
+
+		combinedPatch := `[` +
+			`{"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"gateway-ca","secret":{"secretName":"gateway-ca-bundle"}}},` +
+			`{"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"gateway-ca","mountPath":"/certs/gateway-ca.crt","subPath":"ca.crt","readOnly":true}},` +
+			`{"op":"add","path":"/spec/template/spec/containers/0/command/-","value":"--gateway-ca-cert=/certs/gateway-ca.crt"}` +
+			`]`
+		Expect(PatchDeploymentJSON(ctx, SystemNamespace, "mcp-gateway", combinedPatch)).To(Succeed())
+		Expect(WaitForDeploymentReady(ctx, SystemNamespace, "mcp-gateway")).To(Succeed())
+	} else {
+		// OpenShift/real clusters: use CA bundle ConfigMap (configurable via GATEWAY_CA_BUNDLE_CONFIGMAP)
+		combinedPatch := fmt.Sprintf(`[`+
+			`{"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"gateway-ca-cert","configMap":{"name":"%s"}}},`+
+			`{"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"gateway-ca-cert","mountPath":"/etc/gateway-ca-cert","readOnly":true}},`+
+			`{"op":"add","path":"/spec/template/spec/containers/0/command/-","value":"--gateway-ca-cert=/etc/gateway-ca-cert/ca-bundle.crt"}`+
+			`]`, GatewayCABundleConfigMap)
+		Expect(PatchDeploymentJSON(ctx, SystemNamespace, "mcp-gateway", combinedPatch)).To(Succeed())
+		Expect(WaitForDeploymentReady(ctx, SystemNamespace, "mcp-gateway")).To(Succeed())
 	}
-	_ = k8sClient.Delete(ctx, caBundle)
-	Expect(k8sClient.Create(ctx, caBundle)).To(Succeed())
-
-	combinedPatch := `[` +
-		`{"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"gateway-ca","secret":{"secretName":"gateway-ca-bundle"}}},` +
-		`{"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"gateway-ca","mountPath":"/certs/gateway-ca.crt","subPath":"ca.crt","readOnly":true}},` +
-		`{"op":"add","path":"/spec/template/spec/containers/0/command/-","value":"--gateway-ca-cert=/certs/gateway-ca.crt"}` +
-		`]`
-	Expect(PatchDeploymentJSON(ctx, SystemNamespace, "mcp-gateway", combinedPatch)).To(Succeed())
-	Expect(WaitForDeploymentReady(ctx, SystemNamespace, "mcp-gateway")).To(Succeed())
 
 })
 

@@ -16,7 +16,8 @@ import (
 
 // auth tests must target the gateway via hostname, not localhost.
 // AuthPolicy (Authorino) matches on Host header; localhost bypasses enforcement.
-var authGatewayURL = goenv.GetDefault("AUTH_GATEWAY_URL", fmt.Sprintf("%s://%s:8001/mcp", e2eScheme, gatewayPublicHost))
+// Use the same HTTPS gateway URL as regular e2e tests (targets mcp-tls listener).
+var authGatewayURL = goenv.GetDefault("AUTH_GATEWAY_URL", gatewayURL)
 
 func authInitBody() []byte {
 	return []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"e2e-auth","version":"0.0.1"}}}`)
