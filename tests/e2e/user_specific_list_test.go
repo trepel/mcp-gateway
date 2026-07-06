@@ -224,7 +224,10 @@ var _ = Describe("MCP Gateway User-Specific Tool Lists", func() {
 		GinkgoWriter.Printf("baseline standard tool count: %d\n", baselineCount)
 	})
 
-	It("[UserSpecificList] user-specific server down does not break tools/list", func() {
+	// Serial: scales the shared user-specific server (which backs the suite's
+	// permanent registration) to 0. With no other registrations present the
+	// broker reports not-ready, so parallel specs would see gateway-wide 500s.
+	It("[UserSpecificList] user-specific server down does not break tools/list", Serial, func() {
 		By("Creating a standard server registration")
 		stdReg := NewMCPServerResourcesWithDefaults("uspec-degrade", k8sClient).
 			WithPrefix("std_").Build()
@@ -264,6 +267,11 @@ var _ = Describe("MCP Gateway User-Specific Tool Lists", func() {
 
 		By("Scaling user-specific server back up for other tests")
 		Expect(ScaleDeployment(ctx, TestServerNameSpace, userSpecificMCPTestServer, 1)).To(Succeed())
+		// wait for the backend before handing over to the next spec; manager
+		// backoff otherwise keeps the broker not-ready well past pod start
+		Eventually(func(g Gomega) {
+			g.Expect(WaitForDeploymentReady(ctx, TestServerNameSpace, userSpecificMCPTestServer)).To(Succeed())
+		}, TestTimeoutMedium, TestRetryInterval).Should(Succeed())
 	})
 
 	It("[UserSpecificList] tool call routing works for user-specific tools", func() {
