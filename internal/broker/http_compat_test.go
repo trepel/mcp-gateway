@@ -188,6 +188,28 @@ func TestCompat_ContentType400(t *testing.T) {
 	require.Equal(t, "text/plain; charset=utf-8", res.header.Get("Content-Type"))
 }
 
+// envoy bounds bodies before they reach the broker in production; direct
+// access must not allow unbounded allocation. bodies within the bound are
+// unaffected.
+func TestCompat_OversizedBodyRejected(t *testing.T) {
+	h := newCompatHarness(t)
+	sid := h.initialize(t)
+
+	oversized := `{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"pad":"` +
+		strings.Repeat("a", maxRequestBodyBytes+1) + `"}}`
+	res := h.post(t, sid, oversized)
+	require.Equal(t, http.StatusRequestEntityTooLarge, res.status, res.body)
+	require.Equal(t, "application/json", res.header.Get("Content-Type"))
+	require.Equal(t, `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"request body too large"}}`+"\n", res.body)
+
+	// a large-but-bounded body still dispatches normally
+	padded := fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"tools/list","params":{"_meta":{"pad":%q}}}`,
+		h.rpcID.Add(1), strings.Repeat("a", 1<<10))
+	res = h.post(t, sid, padded)
+	require.Equal(t, http.StatusOK, res.status, res.body)
+	require.Contains(t, res.body, `"tools"`)
+}
+
 // mark3labs never required an Accept header.
 func TestCompat_AcceptHeaderOptional(t *testing.T) {
 	h := newCompatHarness(t)
