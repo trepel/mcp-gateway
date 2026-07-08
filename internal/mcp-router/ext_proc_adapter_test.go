@@ -7,9 +7,11 @@ import (
 	"log/slog"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/Kuadrant/mcp-gateway/internal/config"
+	"github.com/Kuadrant/mcp-gateway/internal/routing"
 	"github.com/Kuadrant/mcp-gateway/internal/session"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	extProcV3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
@@ -343,111 +345,17 @@ func TestProcessSpanEnded(t *testing.T) {
 	require.True(t, found, "expected mcp-router.process span to be recorded")
 }
 
-func TestProcess_StreamedBodyMultipleChunks(t *testing.T) {
-	srv := newTestServer(t)
-
-	// do-nothing body response for intermediate chunks
-	doNothingBody := &extProcV3.ProcessingResponse{
-		Response: &extProcV3.ProcessingResponse_RequestBody{
-			RequestBody: &extProcV3.BodyResponse{
-				Response: &extProcV3.CommonResponse{},
-			},
-		},
-	}
-
-	mock := makeMockProcessServer(t, []mockProcessServerMessageAndErr{
-		requestHeadersStep(),
-		// chunk 1: partial body, EndOfStream=false
-		{
-			msg: &extProcV3.ProcessingRequest{
-				Request: &extProcV3.ProcessingRequest_RequestBody{
-					RequestBody: &extProcV3.HttpBody{
-						Body:        []byte(`{"jsonrpc":"2.0",`),
-						EndOfStream: false,
-					},
-				},
-			},
-			resp: []*extProcV3.ProcessingResponse{doNothingBody},
-		},
-		// chunk 2: partial body, EndOfStream=false
-		{
-			msg: &extProcV3.ProcessingRequest{
-				Request: &extProcV3.ProcessingRequest_RequestBody{
-					RequestBody: &extProcV3.HttpBody{
-						Body:        []byte(`"method":"initialize",`),
-						EndOfStream: false,
-					},
-				},
-			},
-			resp: []*extProcV3.ProcessingResponse{doNothingBody},
-		},
-		// chunk 3: final body, EndOfStream=true — triggers routing
-		{
-			msg: &extProcV3.ProcessingRequest{
-				Request: &extProcV3.ProcessingRequest_RequestBody{
-					RequestBody: &extProcV3.HttpBody{
-						Body:        []byte(`"id":1}`),
-						EndOfStream: true,
-					},
-				},
-			},
-			resp: []*extProcV3.ProcessingResponse{
-				{
-					Response: &extProcV3.ProcessingResponse_RequestBody{
-						RequestBody: &extProcV3.BodyResponse{
-							Response: &extProcV3.CommonResponse{
-								HeaderMutation: &extProcV3.HeaderMutation{
-									SetHeaders: []*corev3.HeaderValueOption{
-										{Header: &corev3.HeaderValue{Key: "x-mcp-method", RawValue: []byte("initialize")}},
-										{Header: &corev3.HeaderValue{Key: "x-mcp-servername", RawValue: []byte("mcpBroker")}},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		responseHeadersStep(),
-	})
-
-	err := srv.Process(mock)
-	require.NoError(t, err)
-	mock.verifyAllResponsesConsumed()
-}
-
-func TestProcess_StreamedBodyExceedsMaxSize(t *testing.T) {
+func TestProcess_BufferedBodyExceedsMaxSize(t *testing.T) {
 	srv := newTestServer(t)
 	srv.MaxRequestBodySize = 50
 
 	mock := makeMockProcessServer(t, []mockProcessServerMessageAndErr{
 		requestHeadersStep(),
-		// chunk 1: 30 bytes, under the limit
 		{
 			msg: &extProcV3.ProcessingRequest{
 				Request: &extProcV3.ProcessingRequest_RequestBody{
 					RequestBody: &extProcV3.HttpBody{
-						Body:        []byte(`{"jsonrpc":"2.0","method":"in`),
-						EndOfStream: false,
-					},
-				},
-			},
-			resp: []*extProcV3.ProcessingResponse{
-				{
-					Response: &extProcV3.ProcessingResponse_RequestBody{
-						RequestBody: &extProcV3.BodyResponse{
-							Response: &extProcV3.CommonResponse{},
-						},
-					},
-				},
-			},
-		},
-		// chunk 2: pushes total over 50 bytes, expect 413
-		{
-			msg: &extProcV3.ProcessingRequest{
-				Request: &extProcV3.ProcessingRequest_RequestBody{
-					RequestBody: &extProcV3.HttpBody{
-						Body:        []byte(`initialize","id":1,"params":{"extra":"data"}}`),
+						Body:        []byte(`{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"extra":"data"}}`),
 						EndOfStream: true,
 					},
 				},
@@ -464,87 +372,47 @@ func TestProcess_StreamedBodyExceedsMaxSize(t *testing.T) {
 	mock.verifyAllResponsesConsumed()
 }
 
-func TestProcess_StreamedBodyEmptyFinalChunk(t *testing.T) {
-	srv := newTestServer(t)
-
-	doNothingBody := &extProcV3.ProcessingResponse{
-		Response: &extProcV3.ProcessingResponse_RequestBody{
-			RequestBody: &extProcV3.BodyResponse{
-				Response: &extProcV3.CommonResponse{},
-			},
-		},
-	}
-
-	mock := makeMockProcessServer(t, []mockProcessServerMessageAndErr{
-		requestHeadersStep(),
-		// chunk 1: full body in intermediate chunk
-		{
-			msg: &extProcV3.ProcessingRequest{
-				Request: &extProcV3.ProcessingRequest_RequestBody{
-					RequestBody: &extProcV3.HttpBody{
-						Body:        []byte(`{"jsonrpc":"2.0","method":"initialize","id":1}`),
-						EndOfStream: false,
-					},
-				},
-			},
-			resp: []*extProcV3.ProcessingResponse{doNothingBody},
-		},
-		// chunk 2: empty final chunk, EndOfStream=true — should process accumulated data
-		{
-			msg: &extProcV3.ProcessingRequest{
-				Request: &extProcV3.ProcessingRequest_RequestBody{
-					RequestBody: &extProcV3.HttpBody{
-						Body:        []byte{},
-						EndOfStream: true,
-					},
-				},
-			},
-			resp: []*extProcV3.ProcessingResponse{
-				{
-					Response: &extProcV3.ProcessingResponse_RequestBody{
-						RequestBody: &extProcV3.BodyResponse{
-							Response: &extProcV3.CommonResponse{
-								HeaderMutation: &extProcV3.HeaderMutation{
-									SetHeaders: []*corev3.HeaderValueOption{
-										{Header: &corev3.HeaderValue{Key: "x-mcp-method", RawValue: []byte("initialize")}},
-										{Header: &corev3.HeaderValue{Key: "x-mcp-servername", RawValue: []byte("mcpBroker")}},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		responseHeadersStep(),
-	})
-
-	err := srv.Process(mock)
-	require.NoError(t, err)
-	mock.verifyAllResponsesConsumed()
-}
-
 func newTestServer(t *testing.T) *ExtProcServer {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	cache, err := session.NewCache()
 	require.NoError(t, err)
+
+	serverConfigs := []*config.MCPServer{
+		{
+			Name:     "dummy",
+			URL:      "http://localhost:9090",
+			Prefix:   "",
+			State:    "Enabled",
+			Hostname: "dummy",
+		},
+	}
+
+	table := routing.NewTableBuilder().Build()
+	routingConfig := atomic.Pointer[config.MCPServersConfig]{}
+	routingConfig.Store(&config.MCPServersConfig{Servers: serverConfigs})
+
+	router := &routing.Router202511{
+		RoutingConfig: &routingConfig,
+		Table:         func() routing.RoutingTable { return table },
+		SessionCache:  cache,
+		Logger:        logger,
+	}
+
+	mcpConfig := &config.MCPServersConfig{Servers: serverConfigs}
+
 	server := &ExtProcServer{
 		Logger:       logger,
 		SessionCache: cache,
-		Broker:       newMockBroker(nil, map[string]string{}),
+		Router:       router,
 	}
-	server.RoutingConfig.Store(&config.MCPServersConfig{
-		Servers: []*config.MCPServer{
-			{
-				Name:     "dummy",
-				URL:      "http://localhost:9090",
-				Prefix:   "",
-				State:    "Enabled",
-				Hostname: "dummy",
-			},
-		},
-	})
+	server.RoutingConfig.Store(mcpConfig)
+	server.ResponseHandler = &routing.ResponseHandler202511{
+		RoutingConfig:      &server.RoutingConfig,
+		SessionCache:       cache,
+		ElicitationEnabled: false,
+		Logger:             logger,
+	}
 	return server
 }
 
@@ -754,10 +622,14 @@ func requireMatchingHeaderMutation(t *testing.T, expected, actual *extProcV3.Hea
 		}
 	}
 	require.Equal(t, len(expected.SetHeaders), len(actual.SetHeaders))
-	for i, actualHeaderValueOption := range actual.SetHeaders {
-		exp := expected.SetHeaders[i].Header
-		act := actualHeaderValueOption.Header
-		require.Equal(t, exp.Key, act.Key)
+	actualByKey := make(map[string]*corev3.HeaderValue, len(actual.SetHeaders))
+	for _, h := range actual.SetHeaders {
+		actualByKey[h.Header.Key] = h.Header
+	}
+	for _, expOpt := range expected.SetHeaders {
+		exp := expOpt.Header
+		act, ok := actualByKey[exp.Key]
+		require.True(t, ok, "expected header %q not found in actual headers", exp.Key)
 		if exp.Value != "" || act.Value != "" {
 			require.Equal(t, exp.Value, act.Value, "mismatch on header %q Value", act.Key)
 		}

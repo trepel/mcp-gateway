@@ -16,6 +16,7 @@ import (
 	"github.com/Kuadrant/mcp-gateway/internal/broker/upstream"
 	"github.com/Kuadrant/mcp-gateway/internal/config"
 	internaljwt "github.com/Kuadrant/mcp-gateway/internal/jwt"
+	"github.com/Kuadrant/mcp-gateway/internal/routing"
 	"github.com/Kuadrant/mcp-gateway/internal/session"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"go.opentelemetry.io/otel/attribute"
@@ -67,6 +68,9 @@ type MCPBroker interface {
 
 	// IsBrokerToolName returns true if the given tool name is a broker-internal meta-tool
 	IsBrokerToolName(name string) bool
+
+	// RoutingTable returns a consistent snapshot of tool/prompt → server routing data
+	RoutingTable() routing.RoutingTable
 
 	// Shutdown closes any resources associated with this Broker
 	Shutdown(ctx context.Context) error

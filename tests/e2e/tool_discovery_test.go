@@ -544,9 +544,14 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 			Expect(AddDeploymentCommandFlag(ctx, toolDiscNamespace, deploymentName, "--discovery-tools-enabled=false")).To(Succeed())
 
 			DeferCleanup(func() {
-				By("removing --discovery-tools-enabled=false flag")
-				Expect(RemoveDeploymentCommandFlag(ctx, toolDiscNamespace, deploymentName, "--discovery-tools-enabled=false")).To(Succeed())
-				Expect(WaitForDeploymentReady(ctx, toolDiscNamespace, deploymentName)).To(Succeed())
+				By("removing --discovery-tools-enabled=false flag (best-effort cleanup)")
+				if err := RemoveDeploymentCommandFlag(ctx, toolDiscNamespace, deploymentName, "--discovery-tools-enabled=false"); err != nil {
+					GinkgoLogr.Info("cleanup: failed to remove flag", "error", err)
+					return
+				}
+				if err := WaitForDeploymentReady(ctx, toolDiscNamespace, deploymentName); err != nil {
+					GinkgoLogr.Info("cleanup: deployment not ready after flag removal", "error", err)
+				}
 			})
 
 			By("waiting for rollout to complete")

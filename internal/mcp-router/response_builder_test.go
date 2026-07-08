@@ -147,37 +147,6 @@ func TestResponseBuilder_WithImmediateResponse(t *testing.T) {
 	}
 }
 
-func TestResponseBuilder_WithStreamingResponse(t *testing.T) {
-	rb := NewResponse()
-	headers := []*basepb.HeaderValueOption{
-		{
-			Header: &basepb.HeaderValue{
-				Key:      "content-length",
-				RawValue: []byte("100"),
-			},
-		},
-	}
-	body := []byte(`{"streaming":"data"}`)
-
-	rb.WithStreamingResponse(headers, body)
-	responses := rb.Build()
-	require.Len(t, responses, 1)
-
-	require.IsType(t, &eppb.ProcessingResponse_RequestBody{}, responses[0].Response)
-	rbody := responses[0].Response.(*eppb.ProcessingResponse_RequestBody)
-	require.NotNil(t, rbody.RequestBody)
-	require.NotNil(t, rbody.RequestBody.Response)
-
-	require.NotNil(t, rbody.RequestBody.Response.HeaderMutation)
-	require.Len(t, rbody.RequestBody.Response.HeaderMutation.SetHeaders, 1)
-
-	require.NotNil(t, rbody.RequestBody.Response.BodyMutation)
-	streamedResponse := rbody.RequestBody.Response.BodyMutation.GetStreamedResponse()
-	require.NotNil(t, streamedResponse)
-	require.Equal(t, body, streamedResponse.Body)
-	require.True(t, streamedResponse.EndOfStream)
-}
-
 func TestResponseBuilder_WithDoNothingResponse(t *testing.T) {
 	testCases := []struct {
 		Name        string

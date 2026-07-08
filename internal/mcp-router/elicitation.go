@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/Kuadrant/mcp-gateway/internal/idmap"
+	"github.com/Kuadrant/mcp-gateway/internal/routing"
 )
 
 var dataPrefix = []byte("data:")
@@ -24,7 +25,7 @@ var dataPrefix = []byte("data:")
 type sseRewriter struct {
 	buf        []byte
 	idMap      idmap.Map
-	req        *MCPRequest
+	req        *routing.MCPRequest
 	logger     *slog.Logger
 	gatewayIDs []string
 }
@@ -99,7 +100,7 @@ func (w *sseRewriter) maybeRewriteElicitation(ctx context.Context, line []byte) 
 		return line
 	}
 
-	gatewayID, err := w.idMap.Store(ctx, msg.ID, w.req.serverName, w.req.backendSessionID, w.req.GetSessionID())
+	gatewayID, err := w.idMap.Store(ctx, msg.ID, w.req.ServerName, w.req.BackendSessionID, w.req.GetSessionID())
 	if err != nil {
 		w.logger.ErrorContext(ctx, "failed to store elicitation mapping", "error", err)
 		return line
@@ -112,7 +113,7 @@ func (w *sseRewriter) maybeRewriteElicitation(ctx context.Context, line []byte) 
 		"gatewayID",
 		gatewayID,
 		"serverName",
-		w.req.serverName,
+		w.req.ServerName,
 	)
 
 	w.gatewayIDs = append(w.gatewayIDs, gatewayID)

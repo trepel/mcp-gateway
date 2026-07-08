@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	mcpotel "github.com/Kuadrant/mcp-gateway/internal/otel"
+	"github.com/Kuadrant/mcp-gateway/internal/routing"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -48,7 +49,7 @@ func extractTraceContext(ctx context.Context, headers *corev3.HeaderMap) context
 	return otel.GetTextMapPropagator().Extract(ctx, carrier)
 }
 
-func spanAttributes(mcpReq *MCPRequest) []attribute.KeyValue {
+func spanAttributes(mcpReq *routing.MCPRequest) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{
 		componentAttr,
 		attribute.String("mcp.method.name", mcpReq.Method),
@@ -63,8 +64,8 @@ func spanAttributes(mcpReq *MCPRequest) []attribute.KeyValue {
 		attrs = append(attrs, attribute.String("mcp.session.id", mcpReq.GetSessionID()))
 	}
 
-	if mcpReq.serverName != "" {
-		attrs = append(attrs, attribute.String("mcp.server", mcpReq.serverName))
+	if mcpReq.ServerName != "" {
+		attrs = append(attrs, attribute.String("mcp.server", mcpReq.ServerName))
 	}
 
 	if toolName := mcpReq.ToolName(); toolName != "" {
@@ -73,10 +74,8 @@ func spanAttributes(mcpReq *MCPRequest) []attribute.KeyValue {
 
 	attrs = append(attrs, attribute.String("gen_ai.operation.name", mcpReq.Method))
 
-	if mcpReq.Headers != nil {
-		if addr := getSingleValueHeader(mcpReq.Headers, "x-forwarded-for"); addr != "" {
-			attrs = append(attrs, attribute.String("client.address", addr))
-		}
+	if addr := mcpReq.Headers["x-forwarded-for"]; addr != "" {
+		attrs = append(attrs, attribute.String("client.address", addr))
 	}
 
 	return attrs

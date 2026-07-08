@@ -140,31 +140,6 @@ func (rb *ResponseBuilder) WithImmediateJSONRPCResponse(statusCode int32, setHea
 	return rb
 }
 
-// WithStreamingResponse adds a streaming request body response with headers
-func (rb *ResponseBuilder) WithStreamingResponse(headers []*basepb.HeaderValueOption, body []byte, removeHeaders ...string) *ResponseBuilder {
-	rb.response = append(rb.response, &eppb.ProcessingResponse{
-		Response: &eppb.ProcessingResponse_RequestBody{
-			RequestBody: &eppb.BodyResponse{
-				Response: &eppb.CommonResponse{
-					HeaderMutation: &eppb.HeaderMutation{
-						SetHeaders:    headers,
-						RemoveHeaders: removeHeaders,
-					},
-					BodyMutation: &eppb.BodyMutation{
-						Mutation: &eppb.BodyMutation_StreamedResponse{
-							StreamedResponse: &eppb.StreamedBodyResponse{
-								Body:        body,
-								EndOfStream: true,
-							},
-						},
-					},
-				},
-			},
-		},
-	})
-	return rb
-}
-
 // WithDoNothingResponse adds an empty response that allows request to continue unmodified
 func (rb *ResponseBuilder) WithDoNothingResponse(isStreaming bool) *ResponseBuilder {
 	if isStreaming {
