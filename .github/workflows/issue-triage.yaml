@@ -113,38 +113,18 @@ jobs:
             if (action !== 'closed') {
               if (!hasMilestone) {
                 // 1. If an issue has no milestone:
-                
-                // a. Remove 'triage/accepted' (e.g., milestone was removed)
-                if (currentLabels.includes('triage/accepted')) {
-                  labelsToRemove.push('triage/accepted');
-                  console.log('No milestone -> removing triage/accepted');
-                }
+                // Only manage triage/needs-triage as a default.
+                // Do NOT strip triage/accepted or priority/* — maintainers
+                // can accept and prioritise before assigning a milestone.
+                const triageLabels = getLabelsStartingWith('triage/');
+                const nonNeedsTriageLabels = triageLabels.filter(l => l !== 'triage/needs-triage');
 
-                // b. Remove all priority labels
-                const priorityLabels = getLabelsStartingWith('priority/');
-                priorityLabels.forEach(label => {
-                  if (!labelsToRemove.includes(label)) {
-                    labelsToRemove.push(label);
-                    console.log(`No milestone -> removing ${label}`);
-                  }
-                });
-
-                // c. Ensure 'triage/needs-triage' label (unless another triage label exists)
-                // accounting for triage/accepted being removed above
-                const remainingTriageLabels = currentLabels.filter(l =>
-                  l.startsWith('triage/') &&
-                  l !== 'triage/accepted' &&
-                  l !== 'triage/needs-triage' &&
-                  !labelsToRemove.includes(l)
-                );
-
-                if (remainingTriageLabels.length === 0) {
+                if (nonNeedsTriageLabels.length === 0 && !triageLabels.includes('triage/needs-triage')) {
                   if (!labelsToAdd.includes('triage/needs-triage')) {
                     labelsToAdd.push('triage/needs-triage');
-                    console.log('No milestone and no triage label -> adding triage/needs-triage');
+                    console.log('No triage label -> adding triage/needs-triage');
                   }
-                } else if (currentLabels.includes('triage/needs-triage')) {
-                  // if another triage label exists, remove 'triage/needs-triage'
+                } else if (nonNeedsTriageLabels.length > 0 && triageLabels.includes('triage/needs-triage')) {
                   if (!labelsToRemove.includes('triage/needs-triage')) {
                     labelsToRemove.push('triage/needs-triage');
                     console.log('Other triage label found -> removing triage/needs-triage');
