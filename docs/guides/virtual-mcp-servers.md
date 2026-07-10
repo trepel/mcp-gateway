@@ -52,7 +52,7 @@ Create virtual servers for different use cases. Replace the example tool names b
 
 ```bash
 kubectl apply -f - <<EOF
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPVirtualServer
 metadata:
   name: dev-tools
@@ -70,7 +70,7 @@ EOF
 
 ```bash
 kubectl apply -f - <<EOF
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPVirtualServer
 metadata:
   name: data-tools

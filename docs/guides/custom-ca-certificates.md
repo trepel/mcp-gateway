@@ -54,7 +54,7 @@ Add `caCertBundleRef` to your MCPGatewayExtension:
 
 ```bash
 kubectl apply -f - <<EOF
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPGatewayExtension
 metadata:
   name: mcp-gateway
@@ -113,7 +113,7 @@ When most servers share a CA but some use unique CAs, configure both:
 
 ```yaml
 # MCPGatewayExtension — shared CA for most servers
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPGatewayExtension
 metadata:
   name: mcp-gateway
@@ -126,7 +126,7 @@ spec:
     name: shared-ca-bundle
 ---
 # MCPServerRegistration — server with a unique CA
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPServerRegistration
 metadata:
   name: special-server
@@ -188,7 +188,7 @@ Add `caCertSecretRef` to your MCPServerRegistration:
 
 ```bash
 kubectl apply -f - <<EOF
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPServerRegistration
 metadata:
   name: my-private-server

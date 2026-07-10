@@ -275,7 +275,7 @@ func (r *MCPGatewayExtensionReconciler) reconcileActive(ctx context.Context, mcp
 	return ctrl.Result{}, r.updateStatus(ctx, mcpExt, metav1.ConditionTrue, mcpv1.ConditionReasonSuccess, "successfully verified and configured")
 }
 
-func (r *MCPGatewayExtensionReconciler) validateGatewayTarget(ctx context.Context, mcpExt *mcpv1.MCPGatewayExtension) (*gatewayv1.Gateway, *mcpv1.ListenerConfig, error) {
+func (r *MCPGatewayExtensionReconciler) validateGatewayTarget(ctx context.Context, mcpExt *mcpv1.MCPGatewayExtension) (*gatewayv1.Gateway, *ListenerConfig, error) {
 	targetGateway, err := r.gatewayTarget(ctx, mcpExt.Spec.TargetRef)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -339,7 +339,7 @@ func (r *MCPGatewayExtensionReconciler) validateGatewayTarget(ctx context.Contex
 }
 
 // findListenerConfigByName finds listener configuration by name.
-func findListenerConfigByName(gateway *gatewayv1.Gateway, sectionName string) (*mcpv1.ListenerConfig, error) {
+func findListenerConfigByName(gateway *gatewayv1.Gateway, sectionName string) (*ListenerConfig, error) {
 	for _, listener := range gateway.Spec.Listeners {
 		if string(listener.Name) == sectionName {
 			hostname := ""
@@ -347,7 +347,7 @@ func findListenerConfigByName(gateway *gatewayv1.Gateway, sectionName string) (*
 				hostname = string(*listener.Hostname)
 			}
 			port := uint32(listener.Port) // #nosec G115
-			return &mcpv1.ListenerConfig{
+			return &ListenerConfig{
 				Port:     port,
 				Hostname: hostname,
 				Name:     sectionName,
@@ -433,7 +433,7 @@ func (r *MCPGatewayExtensionReconciler) checkNamespaceConflict(ctx context.Conte
 // checkListenerConflict checks if there are multiple MCPGatewayExtensions targeting listeners
 // that share the same port on the same Gateway. This is invalid because only one ext_proc
 // can handle a given port.
-func (r *MCPGatewayExtensionReconciler) checkListenerConflict(ctx context.Context, mcpExt *mcpv1.MCPGatewayExtension, targetGateway *gatewayv1.Gateway, listenerConfig *mcpv1.ListenerConfig) error {
+func (r *MCPGatewayExtensionReconciler) checkListenerConflict(ctx context.Context, mcpExt *mcpv1.MCPGatewayExtension, targetGateway *gatewayv1.Gateway, listenerConfig *ListenerConfig) error {
 	existingExts, err := r.listMCPGatewayExtsForGateway(ctx, targetGateway)
 	if err != nil {
 		return fmt.Errorf("failed to list extensions for gateway: %w", err)
@@ -500,7 +500,7 @@ const GatewayListenerConditionType gatewayv1.ListenerConditionType = "MCPGateway
 
 // updateGatewayListenerStatus updates the Gateway listener status with a condition
 // indicating that an MCP Gateway Extension is configured for this listener
-func (r *MCPGatewayExtensionReconciler) updateGatewayListenerStatus(ctx context.Context, mcpExt *mcpv1.MCPGatewayExtension, gateway *gatewayv1.Gateway, listenerConfig *mcpv1.ListenerConfig) error {
+func (r *MCPGatewayExtensionReconciler) updateGatewayListenerStatus(ctx context.Context, mcpExt *mcpv1.MCPGatewayExtension, gateway *gatewayv1.Gateway, listenerConfig *ListenerConfig) error {
 	// get fresh copy of gateway to avoid conflicts
 	freshGateway := &gatewayv1.Gateway{}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(gateway), freshGateway); err != nil {
@@ -729,7 +729,7 @@ func (r *MCPGatewayExtensionReconciler) enqueueMCPGatewayExtForReferenceGrant(ct
 	return requests
 }
 
-func (r *MCPGatewayExtensionReconciler) buildEnvoyFilter(mcpExt *mcpv1.MCPGatewayExtension, targetGateway *gatewayv1.Gateway, listenerConfig *mcpv1.ListenerConfig) (*istionetv1alpha3.EnvoyFilter, error) {
+func (r *MCPGatewayExtensionReconciler) buildEnvoyFilter(mcpExt *mcpv1.MCPGatewayExtension, targetGateway *gatewayv1.Gateway, listenerConfig *ListenerConfig) (*istionetv1alpha3.EnvoyFilter, error) {
 	// build the ext_proc filter config as a structpb.Struct
 	extProcConfig, err := structpb.NewStruct(map[string]any{
 		"name": "envoy.filters.http.ext_proc",
@@ -803,7 +803,7 @@ func (r *MCPGatewayExtensionReconciler) buildEnvoyFilter(mcpExt *mcpv1.MCPGatewa
 	}, nil
 }
 
-func (r *MCPGatewayExtensionReconciler) reconcileEnvoyFilter(ctx context.Context, mcpExt *mcpv1.MCPGatewayExtension, targetGateway *gatewayv1.Gateway, listenerConfig *mcpv1.ListenerConfig) error {
+func (r *MCPGatewayExtensionReconciler) reconcileEnvoyFilter(ctx context.Context, mcpExt *mcpv1.MCPGatewayExtension, targetGateway *gatewayv1.Gateway, listenerConfig *ListenerConfig) error {
 	envoyFilter, err := r.buildEnvoyFilter(mcpExt, targetGateway, listenerConfig)
 	if err != nil {
 		return fmt.Errorf("failed to build envoy filter: %w", err)

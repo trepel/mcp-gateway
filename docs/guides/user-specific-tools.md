@@ -26,7 +26,7 @@ Create an MCPServerRegistration with `userSpecificList: Enabled`. A `prefix` is 
 
 ```bash
 kubectl apply -f - <<EOF
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPServerRegistration
 metadata:
   name: my-user-scoped-server

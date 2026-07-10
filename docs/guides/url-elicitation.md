@@ -45,7 +45,7 @@ The operator reconciles this field into the deployment args and creates the `/to
 Add `tokenURLElicitation: {}` to your MCPServerRegistration spec:
 
 ```yaml
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPServerRegistration
 metadata:
   name: my-server

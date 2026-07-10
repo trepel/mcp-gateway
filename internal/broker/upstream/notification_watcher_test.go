@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	mcpv1 "github.com/Kuadrant/mcp-gateway/api/v1"
 	"github.com/Kuadrant/mcp-gateway/internal/config"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/require"
@@ -106,7 +105,7 @@ func TestNotificationWatcher_TriggersManagerRefetch(t *testing.T) {
 	up := NewUpstreamMCP(&config.MCPServer{Name: "push-server", URL: ts.URL, Prefix: "push_"}, "", watcherTestLogger())
 	gateway := NewMockGatewayServer()
 	// hour-long ticker: only the pushed notification can explain a refresh
-	manager, err := NewUpstreamMCPManager(up, gateway, nil, watcherTestLogger(), time.Hour, mcpv1.InvalidToolPolicyFilterOut)
+	manager, err := NewUpstreamMCPManager(up, gateway, nil, watcherTestLogger(), time.Hour, InvalidToolPolicyFilterOut)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())

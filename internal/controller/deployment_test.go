@@ -987,38 +987,38 @@ func TestBuildBrokerRouterDeployment_ServiceAccount(t *testing.T) {
 func TestDerivePublicHost(t *testing.T) {
 	tests := []struct {
 		name               string
-		listenerConfig     *mcpv1.ListenerConfig
+		listenerConfig     *ListenerConfig
 		annotationOverride string
 		want               string
 		wantErr            bool
 	}{
 		{
 			name:               "annotation overrides listener hostname",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: "listener.example.com"},
+			listenerConfig:     &ListenerConfig{Hostname: "listener.example.com"},
 			annotationOverride: "override.example.com",
 			want:               "override.example.com",
 		},
 		{
 			name:               "uses listener hostname when no annotation",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: "listener.example.com"},
+			listenerConfig:     &ListenerConfig{Hostname: "listener.example.com"},
 			annotationOverride: "",
 			want:               "listener.example.com",
 		},
 		{
 			name:               "handles wildcard hostname",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: "*.example.com"},
+			listenerConfig:     &ListenerConfig{Hostname: "*.example.com"},
 			annotationOverride: "",
 			want:               "mcp.example.com",
 		},
 		{
 			name:               "handles double-wildcard hostname",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: "*.team-a.example.com"},
+			listenerConfig:     &ListenerConfig{Hostname: "*.team-a.example.com"},
 			annotationOverride: "",
 			want:               "mcp.team-a.example.com",
 		},
 		{
 			name:               "empty hostname returns error",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: ""},
+			listenerConfig:     &ListenerConfig{Hostname: ""},
 			annotationOverride: "",
 			wantErr:            true,
 		},
@@ -1030,37 +1030,37 @@ func TestDerivePublicHost(t *testing.T) {
 		},
 		{
 			name:               "annotation takes precedence even with wildcard",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: "*.example.com"},
+			listenerConfig:     &ListenerConfig{Hostname: "*.example.com"},
 			annotationOverride: "specific.example.com",
 			want:               "specific.example.com",
 		},
 		{
 			name:               "strips port from annotation override",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: "listener.example.com"},
+			listenerConfig:     &ListenerConfig{Hostname: "listener.example.com"},
 			annotationOverride: "mcp.127-0-0-1.sslip.io:8001",
 			want:               "mcp.127-0-0-1.sslip.io",
 		},
 		{
 			name:               "annotation without port unchanged",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: "listener.example.com"},
+			listenerConfig:     &ListenerConfig{Hostname: "listener.example.com"},
 			annotationOverride: "mcp.127-0-0-1.sslip.io",
 			want:               "mcp.127-0-0-1.sslip.io",
 		},
 		{
 			name:               "invalid hostname with path returns error",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: "example.com/path"},
+			listenerConfig:     &ListenerConfig{Hostname: "example.com/path"},
 			annotationOverride: "",
 			wantErr:            true,
 		},
 		{
 			name:               "annotation with scheme should error",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: "listener.example.com"},
+			listenerConfig:     &ListenerConfig{Hostname: "listener.example.com"},
 			annotationOverride: "https://example.com",
 			wantErr:            true,
 		},
 		{
 			name:               "annotation with path should error",
-			listenerConfig:     &mcpv1.ListenerConfig{Hostname: "listener.example.com"},
+			listenerConfig:     &ListenerConfig{Hostname: "listener.example.com"},
 			annotationOverride: "example.com/path",
 			wantErr:            true,
 		},
@@ -1090,7 +1090,7 @@ func TestDerivePrivateHost(t *testing.T) {
 	tests := []struct {
 		name             string
 		spec             mcpv1.MCPGatewayExtensionSpec
-		listenerConfig   *mcpv1.ListenerConfig
+		listenerConfig   *ListenerConfig
 		gatewayClassName string
 		want             string
 	}{
@@ -1103,7 +1103,7 @@ func TestDerivePrivateHost(t *testing.T) {
 				},
 			},
 			gatewayClassName: "istio",
-			listenerConfig:   &mcpv1.ListenerConfig{Port: 8080, Protocol: "HTTP"},
+			listenerConfig:   &ListenerConfig{Port: 8080, Protocol: "HTTP"},
 			want:             "my-gw-istio.gateway-system.svc.cluster.local:8080",
 		},
 		{
@@ -1115,7 +1115,7 @@ func TestDerivePrivateHost(t *testing.T) {
 				},
 			},
 			gatewayClassName: "istio",
-			listenerConfig:   &mcpv1.ListenerConfig{Port: 443, Protocol: "HTTPS"},
+			listenerConfig:   &ListenerConfig{Port: 443, Protocol: "HTTPS"},
 			want:             "https://my-gw-istio.gateway-system.svc.cluster.local:443",
 		},
 		{
@@ -1127,7 +1127,7 @@ func TestDerivePrivateHost(t *testing.T) {
 				},
 			},
 			gatewayClassName: "istio",
-			listenerConfig:   &mcpv1.ListenerConfig{Port: 443, Protocol: "https"},
+			listenerConfig:   &ListenerConfig{Port: 443, Protocol: "https"},
 			want:             "https://my-gw-istio.gateway-system.svc.cluster.local:443",
 		},
 		{
@@ -1139,7 +1139,7 @@ func TestDerivePrivateHost(t *testing.T) {
 				},
 			},
 			gatewayClassName: "openshift-default",
-			listenerConfig:   &mcpv1.ListenerConfig{Port: 443, Protocol: "HTTPS"},
+			listenerConfig:   &ListenerConfig{Port: 443, Protocol: "HTTPS"},
 			want:             "https://my-gateway-openshift-default.gateway-system.svc.cluster.local:443",
 		},
 		{
@@ -1152,7 +1152,7 @@ func TestDerivePrivateHost(t *testing.T) {
 				PrivateHost: "my-gw-istio.gateway-system.svc.cluster.local:8081",
 			},
 			gatewayClassName: "istio",
-			listenerConfig:   &mcpv1.ListenerConfig{Port: 443, Protocol: "HTTPS"},
+			listenerConfig:   &ListenerConfig{Port: 443, Protocol: "HTTPS"},
 			want:             "my-gw-istio.gateway-system.svc.cluster.local:8081",
 		},
 		{
@@ -1165,7 +1165,7 @@ func TestDerivePrivateHost(t *testing.T) {
 				PrivateHost: "https://custom.example.com:443",
 			},
 			gatewayClassName: "istio",
-			listenerConfig:   &mcpv1.ListenerConfig{Port: 8080, Protocol: "HTTP"},
+			listenerConfig:   &ListenerConfig{Port: 8080, Protocol: "HTTP"},
 			want:             "https://custom.example.com:443",
 		},
 		{
@@ -1177,7 +1177,7 @@ func TestDerivePrivateHost(t *testing.T) {
 				},
 			},
 			gatewayClassName: "istio",
-			listenerConfig:   &mcpv1.ListenerConfig{Port: 9090, Protocol: "TCP"},
+			listenerConfig:   &ListenerConfig{Port: 9090, Protocol: "TCP"},
 			want:             "my-gw-istio.gateway-system.svc.cluster.local:9090",
 		},
 	}

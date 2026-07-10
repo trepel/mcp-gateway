@@ -313,7 +313,7 @@ func stripPort(host string) string {
 // priority: annotation override > listener hostname.
 // For wildcard hostnames (*.example.com), we use mcp.example.com as the default subdomain.
 // Any port suffix is stripped since HTTPRoute hostnames don't allow ports.
-func derivePublicHost(listenerConfig *mcpv1.ListenerConfig, annotationOverride string) (string, error) {
+func derivePublicHost(listenerConfig *ListenerConfig, annotationOverride string) (string, error) {
 	var hostname string
 	// annotation takes precedence for backwards compatibility
 	if annotationOverride != "" {
@@ -344,7 +344,7 @@ func derivePublicHost(listenerConfig *mcpv1.ListenerConfig, annotationOverride s
 // port). Otherwise the host is computed from the targetRef and listener port,
 // and an https:// scheme prefix is added when the listener is HTTPS so the
 // broker hairpin doesn't send plain HTTP to a TLS-only port (issue #917).
-func derivePrivateHost(mcpExt *mcpv1.MCPGatewayExtension, listenerConfig *mcpv1.ListenerConfig, gatewayClassName string) string {
+func derivePrivateHost(mcpExt *mcpv1.MCPGatewayExtension, listenerConfig *ListenerConfig, gatewayClassName string) string {
 	if mcpExt.Spec.PrivateHost != "" {
 		return mcpExt.Spec.PrivateHost
 	}
@@ -356,7 +356,7 @@ func derivePrivateHost(mcpExt *mcpv1.MCPGatewayExtension, listenerConfig *mcpv1.
 	return host
 }
 
-func (r *MCPGatewayExtensionReconciler) reconcileBrokerRouter(ctx context.Context, mcpExt *mcpv1.MCPGatewayExtension, listenerConfig *mcpv1.ListenerConfig, gatewayClassName string) (bool, error) {
+func (r *MCPGatewayExtensionReconciler) reconcileBrokerRouter(ctx context.Context, mcpExt *mcpv1.MCPGatewayExtension, listenerConfig *ListenerConfig, gatewayClassName string) (bool, error) {
 	// derive values from listener config before building resources
 	publicHost, err := derivePublicHost(listenerConfig, mcpExt.Spec.PublicHost)
 	if err != nil {

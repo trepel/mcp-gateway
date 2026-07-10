@@ -127,7 +127,7 @@ spec:
   location: MESH_EXTERNAL
   resolution: DNS
 ---
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPServerRegistration
 metadata:
   name: kubernetes-mcp-server

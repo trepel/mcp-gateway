@@ -422,7 +422,7 @@ Create the MCPGatewayExtension to associate the team's namespace with a specific
 
 ```bash
 kubectl apply -f - <<EOF
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPGatewayExtension
 metadata:
   name: team-a-gateway

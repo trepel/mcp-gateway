@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	mcpv1 "github.com/Kuadrant/mcp-gateway/api/v1"
 	"github.com/Kuadrant/mcp-gateway/internal/config"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/require"
@@ -23,7 +22,7 @@ func newStatusTestManager(t *testing.T, protocolVersion string) *MCPManager {
 		cfg:             &config.MCPServer{Name: "status-server"},
 		protocolVersion: protocolVersion,
 	}
-	man, err := NewUpstreamMCPManager(mock, &MockToolsAdderDeleter{}, nil, slog.Default(), 0, mcpv1.InvalidToolPolicyFilterOut)
+	man, err := NewUpstreamMCPManager(mock, &MockToolsAdderDeleter{}, nil, slog.Default(), 0, InvalidToolPolicyFilterOut)
 	require.NoError(t, err)
 	return man
 }

@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	mcpv1 "github.com/Kuadrant/mcp-gateway/api/v1"
 	"github.com/Kuadrant/mcp-gateway/internal/broker/upstream"
 	"github.com/Kuadrant/mcp-gateway/internal/config"
 	internaljwt "github.com/Kuadrant/mcp-gateway/internal/jwt"
@@ -104,7 +103,7 @@ type mcpBrokerImpl struct {
 	managerTickerInterval time.Duration
 
 	// invalidToolPolicy controls behavior when upstream tools have invalid schemas
-	invalidToolPolicy mcpv1.InvalidToolPolicy
+	invalidToolPolicy upstream.InvalidToolPolicy
 
 	// elicitationEnabled gates URL elicitation credential collection
 	elicitationEnabled bool
@@ -172,7 +171,7 @@ func WithManagerTickerInterval(interval time.Duration) Option {
 }
 
 // WithInvalidToolPolicy sets the policy for handling upstream tools with invalid schemas
-func WithInvalidToolPolicy(policy mcpv1.InvalidToolPolicy) Option {
+func WithInvalidToolPolicy(policy upstream.InvalidToolPolicy) Option {
 	return func(mb *mcpBrokerImpl) {
 		mb.invalidToolPolicy = policy
 	}
