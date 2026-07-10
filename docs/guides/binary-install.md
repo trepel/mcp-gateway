@@ -25,6 +25,7 @@ This method runs MCP Gateway broker and router components as standalone binaries
 - [Go 1.26+](https://golang.org/doc/install) installed (for building from source)
 - [Git](https://git-scm.com/downloads) installed
 - [Envoy proxy](https://www.envoyproxy.io/docs/envoy/latest/start/install) installed (or Docker to run it as a container)
+- `openssl` (for generating the signing key)
 - Access to MCP servers you want to aggregate
 
 ## Step 1: Build from Source
@@ -206,8 +207,10 @@ envoy -c envoy.yaml
 The gateway requires a signing key for session management. Generate one and start the binary:
 
 ```bash
-# Generate a signing key (do this once, reuse across restarts)
+# Generate a signing key and save it for reuse across restarts
 export GATEWAY_SIGNING_KEY=$(openssl rand -hex 32)
+echo "$GATEWAY_SIGNING_KEY" > .signing-key
+# On subsequent restarts, reload with: export GATEWAY_SIGNING_KEY=$(cat .signing-key)
 
 # Start the gateway
 ./bin/mcp-broker-router \
