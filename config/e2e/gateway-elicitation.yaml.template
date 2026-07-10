@@ -31,7 +31,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - name: '${GATEWAY_CA_BUNDLE_SECRET}'
+          - name: '${GATEWAY_TLS_SECRET}'
       allowedRoutes:
         namespaces:
           from: All

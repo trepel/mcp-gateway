@@ -82,7 +82,7 @@ MCP_GATEWAY_NAME ?= mcp-gateway
 E2E_DOMAIN ?= 127-0-0-1.sslip.io
 GATEWAY_CLASS_NAME ?= istio
 E2E_PLATFORM ?= kind
-GATEWAY_CA_BUNDLE_SECRET ?= mcp-gateway-tls-cert
+GATEWAY_TLS_SECRET ?= mcp-gateway-tls-cert
 
 .PHONY: help
 help: ## Display this help
@@ -489,7 +489,7 @@ deploy-conformance-server: kind-load-conformance-server ## Deploy conformance MC
 .PHONY: generate-e2e-config
 generate-e2e-config: ## Generate e2e gateway configs from templates (E2E_DOMAIN=..., GATEWAY_CLASS_NAME=..., E2E_PLATFORM=kind|openshift)
 	@echo "Generating e2e config with E2E_DOMAIN=$(E2E_DOMAIN), GATEWAY_CLASS_NAME=$(GATEWAY_CLASS_NAME), E2E_PLATFORM=$(E2E_PLATFORM)"
-	@export E2E_DOMAIN=$(E2E_DOMAIN) GATEWAY_CLASS_NAME=$(GATEWAY_CLASS_NAME) GATEWAY_CA_BUNDLE_SECRET=$(GATEWAY_CA_BUNDLE_SECRET) && \
+	@export E2E_DOMAIN=$(E2E_DOMAIN) GATEWAY_CLASS_NAME=$(GATEWAY_CLASS_NAME) GATEWAY_TLS_SECRET=$(GATEWAY_TLS_SECRET) && \
 	  envsubst < config/e2e/gateway-1.yaml.template > config/e2e/gateway-1.yaml && \
 	  envsubst < config/e2e/gateway-2.yaml.template > config/e2e/gateway-2.yaml && \
 	  envsubst < config/e2e/gateway-elicitation.yaml.template > config/e2e/gateway-elicitation.yaml && \
