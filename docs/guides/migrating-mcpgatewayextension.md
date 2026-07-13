@@ -15,7 +15,7 @@ The `targetRef` field now requires a `sectionName` that identifies which listene
 In v0.5.0:
 
 ```yaml
-apiVersion: mcp.kuadrant.io/v1
+apiVersion: mcp.kuadrant.io/v1alpha1
 kind: MCPGatewayExtension
 metadata:
   name: my-mcp-gateway
@@ -144,7 +144,7 @@ Previous versions used annotations to configure MCPGatewayExtension behavior. Th
 ### Before (annotations)
 
 ```yaml
-apiVersion: mcp.kuadrant.io/v1
+apiVersion: mcp.kuadrant.io/v1alpha1
 kind: MCPGatewayExtension
 metadata:
   name: my-mcp-gateway
