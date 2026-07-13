@@ -18,6 +18,9 @@ type gatewayServer struct {
 	tools   map[string]*upstream.GatewayTool
 	prompts map[string]*upstream.GatewayPrompt
 
+	// onTableChange is called after tools or prompts are added/removed
+	onTableChange func()
+
 	// notifyMu guards the pending tools/list_changed delivery state below.
 	// the SDK dispatches list_changed asynchronously (debounced ~10ms via
 	// time.AfterFunc), so targeting state must outlive the trigger call:
@@ -58,10 +61,13 @@ func (g *gatewayServer) AddTools(tools ...upstream.GatewayTool) {
 	// the SDK fires its own list_changed for these; it must reach everyone
 	g.markBroadcast()
 	g.mu.Lock()
-	defer g.mu.Unlock()
 	for _, t := range tools {
 		g.tools[t.Tool.Name] = &t
 		g.server.AddTool(&t.Tool, t.Handler)
+	}
+	g.mu.Unlock()
+	if g.onTableChange != nil {
+		g.onTableChange()
 	}
 }
 
@@ -71,11 +77,14 @@ func (g *gatewayServer) DeleteTools(names ...string) {
 	}
 	g.markBroadcast()
 	g.mu.Lock()
-	defer g.mu.Unlock()
 	for _, name := range names {
 		delete(g.tools, name)
 	}
 	g.server.RemoveTools(names...)
+	g.mu.Unlock()
+	if g.onTableChange != nil {
+		g.onTableChange()
+	}
 }
 
 func (g *gatewayServer) ListTools() map[string]*upstream.GatewayTool {
@@ -95,21 +104,33 @@ func (g *gatewayServer) AddTool(tool mcp.Tool, handler mcp.ToolHandler) {
 }
 
 func (g *gatewayServer) AddPrompts(prompts ...upstream.GatewayPrompt) {
+	if len(prompts) == 0 {
+		return
+	}
 	g.mu.Lock()
-	defer g.mu.Unlock()
 	for _, p := range prompts {
 		g.prompts[p.Prompt.Name] = &p
 		g.server.AddPrompt(&p.Prompt, p.Handler)
 	}
+	g.mu.Unlock()
+	if g.onTableChange != nil {
+		g.onTableChange()
+	}
 }
 
 func (g *gatewayServer) DeletePrompts(names ...string) {
+	if len(names) == 0 {
+		return
+	}
 	g.mu.Lock()
-	defer g.mu.Unlock()
 	for _, name := range names {
 		delete(g.prompts, name)
 	}
 	g.server.RemovePrompts(names...)
+	g.mu.Unlock()
+	if g.onTableChange != nil {
+		g.onTableChange()
+	}
 }
 
 func (g *gatewayServer) ListPrompts() map[string]*upstream.GatewayPrompt {

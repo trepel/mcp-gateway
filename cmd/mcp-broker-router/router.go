@@ -12,7 +12,7 @@ func (a *app) createRouter() {
 	cfg := &a.routerCfg
 
 	a.grpcServer = grpc.NewServer()
-	a.router = &mcpRouter.ExtProcServer{
+	a.server = &mcpRouter.ExtProcServer{
 		Logger:             a.logger.With("component", "router"),
 		SessionCache:       a.sessionCache,
 		ElicitationMap:     a.elicitMap,
@@ -22,10 +22,10 @@ func (a *app) createRouter() {
 	if a.mcpConfig == nil {
 		panic("mcpConfig must be non-nil before constructing the ext_proc server")
 	}
-	a.router.RoutingConfig.Store(a.mcpConfig)
+	a.server.RoutingConfig.Store(a.mcpConfig)
 
-	a.router.Router = &routing.Router202511{
-		RoutingConfig:       &a.router.RoutingConfig,
+	a.server.Router = &routing.Router202511{
+		RoutingConfig:       &a.server.RoutingConfig,
 		Table:               a.mcpBroker.RoutingTable,
 		SessionCache:        a.sessionCache,
 		JWTManager:          a.jwtMgr,
@@ -37,13 +37,13 @@ func (a *app) createRouter() {
 		Logger:              a.logger.With("component", "router-202511"),
 	}
 
-	a.router.ResponseHandler = &routing.ResponseHandler202511{
-		RoutingConfig:      &a.router.RoutingConfig,
+	a.server.ResponseHandler = &routing.ResponseHandler202511{
+		RoutingConfig:      &a.server.RoutingConfig,
 		SessionCache:       a.sessionCache,
 		JWTManager:         a.jwtMgr,
 		ElicitationEnabled: cfg.enableURLElicitation,
 		Logger:             a.logger.With("component", "response-handler-202511"),
 	}
 
-	extProcV3.RegisterExternalProcessorServer(a.grpcServer, a.router)
+	extProcV3.RegisterExternalProcessorServer(a.grpcServer, a.server)
 }

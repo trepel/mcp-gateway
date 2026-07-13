@@ -5,7 +5,7 @@ import (
 )
 
 // buildRoutingTable creates a routing.Table snapshot from the broker's current
-// registered servers. Called under mcpLock.RLock by RoutingTable().
+// registered servers. Must be called under mcpLock (read or write).
 func (m *mcpBrokerImpl) buildRoutingTable() *routing.Table {
 	b := routing.NewTableBuilder()
 
@@ -62,11 +62,21 @@ func (m *mcpBrokerImpl) buildRoutingTable() *routing.Table {
 	return b.Build()
 }
 
-// RoutingTable returns a consistent snapshot of the tool/prompt → server
-// routing data. The router calls this to resolve names without importing
-// the broker package.
+// refreshRoutingTable rebuilds the cached routing table from current state.
+// Must be called under mcpLock (read or write).
+func (m *mcpBrokerImpl) refreshRoutingTable() {
+	m.cachedTable.Store(m.buildRoutingTable())
+}
+
+// RoutingTable returns the cached routing table snapshot. Lock-free on the
+// read path; the table is rebuilt and swapped on config or tool list changes.
 func (m *mcpBrokerImpl) RoutingTable() routing.RoutingTable {
+	if t := m.cachedTable.Load(); t != nil {
+		return t
+	}
+	// cold start: no table cached yet
 	m.mcpLock.RLock()
 	defer m.mcpLock.RUnlock()
-	return m.buildRoutingTable()
+	m.refreshRoutingTable()
+	return m.cachedTable.Load()
 }

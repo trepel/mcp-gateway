@@ -39,13 +39,14 @@ var _ = Describe("MCP Gateway Registration Happy Path", func() {
 		By("Creating HTTPRoutes and MCP Servers")
 		registration1 := NewMCPServerResourcesWithDefaults("basic-registration", k8sClient).WithPrefix("server1").Build()
 		httpRoute1Name := registration1.GetHTTPRouteName()
+		reg1Objects := registration1.GetObjects()
+		deferCleanupResources(&reg1Objects)
 		registeredServer1 := registration1.Register(ctx)
 
 		registration2 := NewMCPServerResourcesWithDefaults("basic-registration", k8sClient).WithPrefix("server2").Build()
+		reg2Objects := registration2.GetObjects()
+		deferCleanupResources(&reg2Objects)
 		registeredServer2 := registration2.Register(ctx)
-
-		testResources := append(registration1.GetObjects(), registration2.GetObjects()...)
-		deferCleanupResources(&testResources)
 
 		By("Verifying MCPServerRegistrations become ready")
 		Eventually(func(g Gomega) {

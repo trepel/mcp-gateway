@@ -559,6 +559,55 @@ func TestValidateSession(t *testing.T) {
 	})
 }
 
+func TestRouteRequest_PrefixFallback(t *testing.T) {
+	serverConfigs := []*config.MCPServer{
+		{
+			Name:             "github",
+			URL:              "http://github.mcp:8080/mcp",
+			Prefix:           "gh_",
+			State:            "Enabled",
+			Hostname:         "github.mcp",
+			UserSpecificList: true,
+		},
+	}
+
+	router, validToken := newTestRouter(t, serverConfigs, map[string]string{}, map[string]string{})
+
+	// register only a prefix, no direct tool entry
+	table := NewTableBuilder().
+		AddPrefix("gh_", &ServerRoute{
+			Name:             "github",
+			Host:             "github.mcp",
+			Prefix:           "gh_",
+			Path:             "/mcp",
+			URL:              "http://github.mcp:8080/mcp",
+			UserSpecificList: true,
+		}).
+		Build()
+	router.Table = func() RoutingTable { return table }
+
+	// pre-populate session so InitForClient is skipped
+	_, err := router.SessionCache.AddSession(context.Background(), validToken, "github", "upstream-session-123", 0)
+	require.NoError(t, err)
+
+	req := &MCPRequest{
+		ID:      ptr.To(1),
+		JSONRPC: "2.0",
+		Method:  "tools/call",
+		Params:  map[string]any{"name": "gh_user_specific_tool"},
+		Headers: map[string]string{"mcp-session-id": validToken},
+	}
+
+	decision := router.RouteRequest(context.Background(), &Request{Parsed: req})
+	require.Nil(t, decision.Error)
+	require.Equal(t, "github.mcp", decision.Authority)
+	require.Equal(t, "/mcp", decision.Path)
+	require.Equal(t, "user_specific_tool", decision.SetHeaders["x-mcp-toolname"])
+	require.Equal(t, "github", decision.SetHeaders["x-mcp-servername"])
+	require.Equal(t, "upstream-session-123", decision.SetHeaders["mcp-session-id"])
+	require.Contains(t, decision.UnsetHeaders, "x-mcp-authorized")
+}
+
 func TestMCPRequest_ReWriteToolName(t *testing.T) {
 	req := &MCPRequest{
 		Params: map[string]any{

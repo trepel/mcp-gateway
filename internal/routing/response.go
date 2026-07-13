@@ -78,7 +78,7 @@ func (h *ResponseHandler202511) HandleResponse(ctx context.Context, input *Respo
 	if input.StatusCode == strconv.Itoa(http.StatusNotFound) && req != nil {
 		h.Logger.InfoContext(ctx, "received 404 from backend MCP ", "method", req.Method, "server", req.ServerName)
 		if err := h.SessionCache.RemoveServerSession(ctx, req.GetSessionID(), req.ServerName); err != nil {
-			h.Logger.ErrorContext(ctx, "failed to remove server session ", "server", req.ServerName, "session", req.GetSessionID())
+			h.Logger.ErrorContext(ctx, "failed to remove server session", "server", req.ServerName, "session", req.GetSessionID(), "error", err)
 		}
 	}
 

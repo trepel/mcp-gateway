@@ -189,6 +189,9 @@ func (mr *MCPRequest) ToolName() string {
 
 // ReWriteToolName replaces tool name in params
 func (mr *MCPRequest) ReWriteToolName(actualTool string) {
+	if mr.Params == nil {
+		mr.Params = map[string]any{}
+	}
 	mr.Params["name"] = actualTool
 }
 
@@ -215,6 +218,9 @@ func (mr *MCPRequest) PromptName() string {
 
 // ReWritePromptName replaces prompt name in params
 func (mr *MCPRequest) ReWritePromptName(actualPrompt string) {
+	if mr.Params == nil {
+		mr.Params = map[string]any{}
+	}
 	mr.Params["name"] = actualPrompt
 }
 
@@ -233,8 +239,12 @@ type ElicitationInfo struct {
 func SseJSONRPC(requestID any, writeBody func(b *strings.Builder)) string {
 	var b strings.Builder
 	b.WriteString("\nevent: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":")
-	idBytes, _ := json.Marshal(requestID)
-	b.Write(idBytes)
+	idBytes, err := json.Marshal(requestID)
+	if err != nil {
+		b.WriteString("null")
+	} else {
+		b.Write(idBytes)
+	}
 	writeBody(&b)
 	b.WriteString("\n\n")
 	return b.String()
