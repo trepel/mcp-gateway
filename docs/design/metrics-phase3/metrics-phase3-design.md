@@ -215,8 +215,9 @@ mcp_broker_tools_list_response_bytes
   type: gauge
   labels: server_name
   description: last observed size in bytes of tools/list response per upstream server.
-               updates on each discovery. sum across servers gives total
-               gateway context footprint.
+               updates on each discovery. set to 0 when a server becomes
+               unreachable. removed when the server registration is deleted.
+               sum across servers gives total gateway context footprint.
 ```
 
 ```promql
