@@ -112,6 +112,7 @@ spec:
         mcp_server_name:
           operation: UPSERT
           value: "request.headers['x-mcp-servername']"
+        # optional: adds a label per unique tool, which can increase cardinality significantly
         mcp_tool_name:
           operation: UPSERT
           value: "request.headers['x-mcp-toolname']"
@@ -124,6 +125,7 @@ spec:
         mcp_server_name:
           operation: UPSERT
           value: "request.headers['x-mcp-servername']"
+        # optional: adds a label per unique tool, which can increase cardinality significantly
         mcp_tool_name:
           operation: UPSERT
           value: "request.headers['x-mcp-toolname']"
@@ -135,7 +137,7 @@ A reference configuration will be provided in `examples/otel/istio-mcp-metrics.y
 # request rate per MCP server
 sum(rate(istio_requests_total[5m])) by (mcp_server_name)
 
-# top 10 most called tools
+# top 10 most called tools (requires mcp_tool_name tag override, watch cardinality)
 topk(10, sum(rate(istio_requests_total[5m])) by (mcp_tool_name))
 
 # p99 tool call latency per MCP server
