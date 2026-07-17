@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Kuadrant/mcp-gateway/internal/config"
+	internaljwt "github.com/Kuadrant/mcp-gateway/internal/jwt"
 	"github.com/Kuadrant/mcp-gateway/internal/session"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -66,7 +67,7 @@ func (h *ResponseHandler202511) HandleResponse(ctx context.Context, input *Respo
 					}
 				}
 				if ttl <= 0 {
-					h.Logger.ErrorContext(ctx, "skipping client elicitation flag: session TTL not positive", "sid", sid)
+					h.Logger.ErrorContext(ctx, "skipping client elicitation flag: session TTL not positive", "sid", internaljwt.LogSafeSessionID(sid))
 				} else if err := h.SessionCache.SetClientElicitation(ctx, sid, ttl); err != nil {
 					h.Logger.ErrorContext(ctx, "failed to store client elicitation flag", "error", err)
 				}
@@ -78,7 +79,7 @@ func (h *ResponseHandler202511) HandleResponse(ctx context.Context, input *Respo
 	if input.StatusCode == strconv.Itoa(http.StatusNotFound) && req != nil {
 		h.Logger.InfoContext(ctx, "received 404 from backend MCP ", "method", req.Method, "server", req.ServerName)
 		if err := h.SessionCache.RemoveServerSession(ctx, req.GetSessionID(), req.ServerName); err != nil {
-			h.Logger.ErrorContext(ctx, "failed to remove server session", "server", req.ServerName, "session", req.GetSessionID(), "error", err)
+			h.Logger.ErrorContext(ctx, "failed to remove server session", "server", req.ServerName, "session", internaljwt.LogSafeSessionID(req.GetSessionID()), "error", err)
 		}
 	}
 
@@ -96,7 +97,7 @@ func (h *ResponseHandler202511) HandleResponse(ctx context.Context, input *Respo
 			h.Logger.DebugContext(ctx, "received 401 from upstream, invalidating cached user token", "server", req.ServerName)
 			if err := h.SessionCache.DeleteUserToken(ctx, req.GetSessionID(), req.ServerName); err != nil {
 				span.SetAttributes(attribute.String("token_invalidation.error", err.Error()))
-				h.Logger.ErrorContext(ctx, "failed to delete user token", "server", req.ServerName, "session", req.GetSessionID(), "error", err)
+				h.Logger.ErrorContext(ctx, "failed to delete user token", "server", req.ServerName, "session", internaljwt.LogSafeSessionID(req.GetSessionID()), "error", err)
 			} else {
 				span.SetAttributes(attribute.Bool("token_invalidation.succeeded", true))
 			}

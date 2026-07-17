@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	internaljwt "github.com/Kuadrant/mcp-gateway/internal/jwt"
 	mcpotel "github.com/Kuadrant/mcp-gateway/internal/otel"
 	"github.com/Kuadrant/mcp-gateway/internal/routing"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -61,7 +62,7 @@ func spanAttributes(mcpReq *routing.MCPRequest) []attribute.KeyValue {
 	}
 
 	if mcpReq.GetSessionID() != "" {
-		attrs = append(attrs, attribute.String("mcp.session.id", mcpReq.GetSessionID()))
+		attrs = append(attrs, attribute.String("mcp.session.id", internaljwt.LogSafeSessionID(mcpReq.GetSessionID())))
 	}
 
 	if mcpReq.ServerName != "" {

@@ -85,7 +85,7 @@ func (r *Router202511) routeToolCall(ctx context.Context, table RoutingTable, mc
 		trace.WithAttributes(
 			componentAttr,
 			attribute.String("gen_ai.tool.name", toolName),
-			attribute.String("mcp.session.id", mcpReq.GetSessionID()),
+			attribute.String("mcp.session.id", internaljwt.LogSafeSessionID(mcpReq.GetSessionID())),
 		),
 	)
 	defer span.End()
@@ -98,7 +98,7 @@ func (r *Router202511) routeToolCall(ctx context.Context, table RoutingTable, mc
 	}
 
 	if sessionErr := r.validateSession(mcpReq.GetSessionID()); sessionErr != nil {
-		r.Logger.ErrorContext(ctx, "session validation failed", "session", mcpReq.GetSessionID(), "error", sessionErr)
+		r.Logger.ErrorContext(ctx, "session validation failed", "session", internaljwt.LogSafeSessionID(mcpReq.GetSessionID()), "error", sessionErr)
 		mcpotel.SpanError(span, sessionErr, sessionErr.Error())
 		span.SetAttributes(attribute.String("error.type", "invalid_session"))
 		return &Decision{Error: &Error{StatusCode: int(sessionErr.Code()), Message: sessionErr.Error()}}
@@ -206,7 +206,7 @@ func (r *Router202511) routePromptGet(ctx context.Context, table RoutingTable, m
 		trace.WithAttributes(
 			componentAttr,
 			attribute.String("mcp.prompt.name", promptName),
-			attribute.String("mcp.session.id", mcpReq.GetSessionID()),
+			attribute.String("mcp.session.id", internaljwt.LogSafeSessionID(mcpReq.GetSessionID())),
 		),
 	)
 	defer span.End()
@@ -219,7 +219,7 @@ func (r *Router202511) routePromptGet(ctx context.Context, table RoutingTable, m
 	}
 
 	if sessionErr := r.validateSession(mcpReq.GetSessionID()); sessionErr != nil {
-		r.Logger.ErrorContext(ctx, "session validation failed", "session", mcpReq.GetSessionID(), "error", sessionErr)
+		r.Logger.ErrorContext(ctx, "session validation failed", "session", internaljwt.LogSafeSessionID(mcpReq.GetSessionID()), "error", sessionErr)
 		mcpotel.SpanError(span, sessionErr, sessionErr.Error())
 		span.SetAttributes(attribute.String("error.type", "invalid_session"))
 		return &Decision{Error: &Error{StatusCode: int(sessionErr.Code()), Message: sessionErr.Error()}}
@@ -269,7 +269,7 @@ func (r *Router202511) routeToUpstream(ctx context.Context, span trace.Span, mcp
 
 	var remoteMCPServerSession string
 	if id, ok := exists[mcpReq.ServerName]; ok {
-		r.Logger.DebugContext(ctx, "found session in cache", "session id", mcpReq.GetSessionID(), "for server", serverInfo.Name, "remote session", id)
+		r.Logger.DebugContext(ctx, "found session in cache", "session id", internaljwt.LogSafeSessionID(mcpReq.GetSessionID()), "for server", serverInfo.Name, "remote session", internaljwt.LogSafeSessionID(id))
 		remoteMCPServerSession = id
 	}
 	if remoteMCPServerSession == "" {
@@ -317,7 +317,7 @@ func (r *Router202511) routeElicitationResponse(ctx context.Context, mcpReq *MCP
 	ctx, span := tracer().Start(ctx, "mcp-router.elicitation-response",
 		trace.WithAttributes(
 			componentAttr,
-			attribute.String("mcp.session.id", mcpReq.GetSessionID()),
+			attribute.String("mcp.session.id", internaljwt.LogSafeSessionID(mcpReq.GetSessionID())),
 		),
 	)
 	defer span.End()
@@ -339,7 +339,7 @@ func (r *Router202511) routeElicitationResponse(ctx context.Context, mcpReq *MCP
 		return &Decision{Error: &Error{StatusCode: 400, Message: "unknown elicitation ID"}}
 	}
 	if entry.GatewaySessionID != mcpReq.GetSessionID() {
-		r.Logger.ErrorContext(ctx, "elicitation session mismatch", "gatewayID", gatewayID, "expected", entry.GatewaySessionID, "got", mcpReq.GetSessionID())
+		r.Logger.ErrorContext(ctx, "elicitation session mismatch", "gatewayID", gatewayID, "expected", internaljwt.LogSafeSessionID(entry.GatewaySessionID), "got", internaljwt.LogSafeSessionID(mcpReq.GetSessionID()))
 		return &Decision{Error: &Error{StatusCode: 403, Message: "session mismatch"}}
 	}
 
@@ -390,7 +390,7 @@ func (r *Router202511) routeBrokerPassthrough(ctx context.Context, mcpReq *MCPRe
 	)
 	defer span.End()
 
-	r.Logger.DebugContext(ctx, "HandleMCPBrokerRequest", "HTTP Method", mcpReq.GetSingleHeaderValue(":method"), "mcp method", mcpReq.Method, "session", mcpReq.SessionID)
+	r.Logger.DebugContext(ctx, "HandleMCPBrokerRequest", "HTTP Method", mcpReq.GetSingleHeaderValue(":method"), "mcp method", mcpReq.Method, "session", internaljwt.LogSafeSessionID(mcpReq.SessionID))
 
 	headers := map[string]string{
 		MethodHeader: mcpReq.Method,
@@ -447,7 +447,7 @@ func (r *Router202511) initializeMCPServerSession(ctx context.Context, mcpReq *M
 		trace.WithAttributes(
 			componentAttr,
 			attribute.String("mcp.server", mcpReq.ServerName),
-			attribute.String("mcp.session.id", mcpReq.GetSessionID()),
+			attribute.String("mcp.session.id", internaljwt.LogSafeSessionID(mcpReq.GetSessionID())),
 		),
 	)
 	defer initSpan.End()
@@ -465,7 +465,7 @@ func (r *Router202511) initializeMCPServerSession(ctx context.Context, mcpReq *M
 			return "", NewRouterErrorf(500, "failed to check for existing session: %w", err)
 		}
 		if id, ok := exists[mcpReq.ServerName]; ok {
-			r.Logger.DebugContext(ctx, "found session in cache", "session id", mcpReq.GetSessionID(), "for server", mcpServerConfig.Name, "remote session", id)
+			r.Logger.DebugContext(ctx, "found session in cache", "session id", internaljwt.LogSafeSessionID(mcpReq.GetSessionID()), "for server", mcpServerConfig.Name, "remote session", internaljwt.LogSafeSessionID(id))
 			return id, nil
 		}
 		passThroughHeaders := map[string]string{}
@@ -501,7 +501,7 @@ func (r *Router202511) initializeMCPServerSession(ctx context.Context, mcpReq *M
 		if !mcpReq.ClientElicitation {
 			clientElicitation, elErr := r.SessionCache.GetClientElicitation(ctx, mcpReq.GetSessionID())
 			if elErr != nil {
-				r.Logger.ErrorContext(ctx, "failed to get client elicitation flag", "error", elErr, "session", mcpReq.GetSessionID())
+				r.Logger.ErrorContext(ctx, "failed to get client elicitation flag", "error", elErr, "session", internaljwt.LogSafeSessionID(mcpReq.GetSessionID()))
 				return "", NewRouterErrorf(500, "failed to read client elicitation flag: %w", elErr)
 			}
 			mcpReq.ClientElicitation = clientElicitation
@@ -524,12 +524,12 @@ func (r *Router202511) initializeMCPServerSession(ctx context.Context, mcpReq *M
 		var sessionCloser = func() {
 			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cleanupCancel()
-			r.Logger.DebugContext(cleanupCtx, "gateway session expired closing client", "Session ", mcpReq.GetSessionID())
+			r.Logger.DebugContext(cleanupCtx, "gateway session expired closing client", "Session ", internaljwt.LogSafeSessionID(mcpReq.GetSessionID()))
 			if err := clientHandle.Close(); err != nil {
 				r.Logger.DebugContext(cleanupCtx, "failed to close client connection", "err", err)
 			}
 			if err := r.SessionCache.DeleteSessions(cleanupCtx, mcpReq.GetSessionID()); err != nil {
-				r.Logger.DebugContext(cleanupCtx, "failed to delete session", "session", mcpReq.GetSessionID(), "err", err)
+				r.Logger.DebugContext(cleanupCtx, "failed to delete session", "session", internaljwt.LogSafeSessionID(mcpReq.GetSessionID()), "err", err)
 			}
 		}
 		expiresAt, err := r.JWTManager.GetExpiresIn(mcpReq.GetSessionID())
@@ -540,12 +540,12 @@ func (r *Router202511) initializeMCPServerSession(ctx context.Context, mcpReq *M
 		}
 		ttl := time.Until(expiresAt)
 		if ttl <= 0 {
-			r.Logger.ErrorContext(ctx, "session already expired, forcing reset", "session", mcpReq.GetSessionID())
+			r.Logger.ErrorContext(ctx, "session already expired, forcing reset", "session", internaljwt.LogSafeSessionID(mcpReq.GetSessionID()))
 			sessionCloser()
 			return "", NewRouterError(401, fmt.Errorf("invalid session"))
 		}
 		remoteSessionID := clientHandle.ID()
-		r.Logger.DebugContext(ctx, "got remote session id ", "mcp server", mcpServerConfig.Name, "session", remoteSessionID)
+		r.Logger.DebugContext(ctx, "got remote session id ", "mcp server", mcpServerConfig.Name, "session", internaljwt.LogSafeSessionID(remoteSessionID))
 		_, storeErr := r.SessionCache.AddSession(ctx, mcpReq.GetSessionID(), mcpServerConfig.Name, remoteSessionID, ttl)
 		if storeErr != nil {
 			r.Logger.ErrorContext(ctx, "failed to add remote session to cache", "error", storeErr)
