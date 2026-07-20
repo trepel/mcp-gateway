@@ -105,6 +105,20 @@ func gatewayPublicHostDefault() string {
 	return "mcp." + e2eDomain
 }
 
+func toolDiscPublicHostDefault() string {
+	if e2eDomain == defaultE2EDomain {
+		return "mcp.tool-discovery.127-0-0-1.sslip.io"
+	}
+	return "mcp.tool-discovery." + e2eDomain
+}
+
+func toolDiscServerHostDefault() string {
+	if e2eDomain == defaultE2EDomain {
+		return "server.tool-discovery.127-0-0-1.sslip.io"
+	}
+	return "server.tool-discovery." + e2eDomain
+}
+
 // public hosts - derived from E2E_DOMAIN
 var (
 	gatewayPublicHost = goenv.GetDefault("GATEWAY_PUBLIC_HOST", gatewayPublicHostDefault())
@@ -112,7 +126,8 @@ var (
 	TeamAPublicHost         = goenv.GetDefault("TEAM_A_PUBLIC_HOST", "team-a."+e2eDomain)
 	TeamBPublicHost         = goenv.GetDefault("TEAM_B_PUBLIC_HOST", "team-b."+e2eDomain)
 	ElicitationPublicHost   = goenv.GetDefault("ELICITATION_PUBLIC_HOST", "elicitation."+e2eDomain)
-	ToolDiscoveryPublicHost = goenv.GetDefault("TOOL_DISCOVERY_PUBLIC_HOST", "mcp.tool-discovery."+e2eDomain)
+	ToolDiscoveryPublicHost  = goenv.GetDefault("TOOL_DISCOVERY_PUBLIC_HOST", toolDiscPublicHostDefault())
+	ToolDiscoveryServerHost = goenv.GetDefault("TOOL_DISCOVERY_SERVER_HOST", toolDiscServerHostDefault())
 )
 
 // gateway URLs - on Kind use localhost port mappings, on real clusters derive from public hosts

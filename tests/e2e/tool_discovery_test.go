@@ -21,9 +21,8 @@ func isBrokerMetaTool(name string) bool {
 }
 
 const (
-	toolDiscExtName    = "tool-discovery-ext"
-	toolDiscNamespace  = "mcp-tool-discovery"
-	toolDiscPublicHost = "mcp.tool-discovery.127-0-0-1.sslip.io"
+	toolDiscExtName   = "tool-discovery-ext"
+	toolDiscNamespace = "mcp-tool-discovery"
 )
 
 var _ = Describe("Tool Discovery", Ordered, func() {
@@ -54,7 +53,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 			InNamespace(toolDiscNamespace).
 			TargetingGateway(GatewayName, GatewayNamespace).
 			WithSectionName(ToolDiscoveryListenerName).
-			WithPublicHost(toolDiscPublicHost).
+			WithPublicHost(ToolDiscoveryPublicHost).
 			Build()
 		toolDiscExt.Clean(ctx).Register(ctx)
 
@@ -113,7 +112,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("disc_meta_").
 				WithCategory("messaging").
 				WithHint("provides messaging tools").
@@ -163,7 +162,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("multicat_").
 				WithCategory("Dining", "reservations").
 				WithSectionName(ToolDiscoveryListenerName).
@@ -176,7 +175,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server1", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("catmsg_").
 				WithCategory("messaging").
 				WithSectionName(ToolDiscoveryListenerName).
@@ -241,7 +240,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("discauth_").
 				WithSectionName(ToolDiscoveryListenerName).
 				WithParentGateway(GatewayName, GatewayNamespace).
@@ -295,7 +294,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("discvs_").
 				WithParentGateway(GatewayName, GatewayNamespace).
 				WithSectionName(ToolDiscoveryListenerName).
@@ -347,7 +346,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("selscope_").
 				WithSectionName(ToolDiscoveryListenerName).
 				WithParentGateway(GatewayName, GatewayNamespace).
@@ -455,7 +454,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("selpart_").
 				WithSectionName(ToolDiscoveryListenerName).
 				WithParentGateway(GatewayName, GatewayNamespace).
@@ -502,7 +501,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("notifsel_").
 				WithSectionName(ToolDiscoveryListenerName).
 				WithParentGateway(GatewayName, GatewayNamespace).
@@ -592,7 +591,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("thzero_").
 				WithSectionName(ToolDiscoveryListenerName).
 				WithParentGateway(GatewayName, GatewayNamespace).
@@ -635,7 +634,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("thtest_").
 				WithSectionName(ToolDiscoveryListenerName).
 				WithParentGateway(GatewayName, GatewayNamespace).
@@ -705,7 +704,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("iso_").
 				WithSectionName(ToolDiscoveryListenerName).
 				WithParentGateway(GatewayName, GatewayNamespace).
@@ -765,7 +764,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("conc_").
 				WithSectionName(ToolDiscoveryListenerName).
 				WithParentGateway(GatewayName, GatewayNamespace).
@@ -846,7 +845,7 @@ var _ = Describe("Tool Discovery", Ordered, func() {
 				InNamespace(toolDiscNamespace).
 				WithBackendTarget("mcp-test-server2", 9090).
 				WithBackendNamespace(TestServerNameSpace).
-				WithHostname("server.tool-discovery.127-0-0-1.sslip.io").
+				WithHostname(ToolDiscoveryServerHost).
 				WithPrefix("reconf_").
 				WithCategory("initial-category").
 				WithHint("initial hint").
