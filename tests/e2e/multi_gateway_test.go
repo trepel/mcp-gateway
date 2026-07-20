@@ -453,7 +453,7 @@ var _ = Describe("MCP Gateway Multi-Gateway", func() {
 			TargetingGateway(SharedGatewayName, GatewayNamespace).
 			WithSectionName(TeamBMCPListenerName).
 			WithPublicHost(TeamBPublicHost).
-			WithListenerPort(8081).
+
 			Build()
 		teamBSetup.Clean(ctx).Register(ctx)
 		defer teamBSetup.TearDown(ctx)
@@ -744,7 +744,7 @@ var _ = Describe("MCP Gateway Multi-Gateway", func() {
 			TargetingGateway(SharedGatewayName, GatewayNamespace).
 			WithSectionName(TeamBMCPListenerName).
 			WithPublicHost(TeamBPublicHost).
-			WithListenerPort(8081).
+
 			Build()
 		teamBSetup.Clean(ctx).Register(ctx)
 		defer teamBSetup.TearDown(ctx)

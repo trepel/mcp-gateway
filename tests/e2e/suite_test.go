@@ -183,7 +183,6 @@ var _ = SynchronizedBeforeSuite(func() {
 		TargetingGateway(GatewayName, GatewayNamespace).
 		WithSectionName(GatewayListenerName).
 		WithPublicHost(gatewayPublicHost).
-		WithListenerPort(8443).
 		Build()
 
 	defaultMCPGatewayExt.

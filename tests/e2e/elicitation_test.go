@@ -86,7 +86,6 @@ var _ = Describe("Elicitation", Ordered, ContinueOnFailure, func() {
 			TargetingGateway(ElicitationGatewayName, GatewayNamespace).
 			WithSectionName(ElicitationListenerName).
 			WithPublicHost(ElicitationPublicHost).
-			WithListenerPort(8443).
 			WithURLElicitation().
 			Build()
 		elicitationExt.Clean(ctx).Register(ctx)
