@@ -10,12 +10,13 @@ Add partial support for federating MCP Resources through the gateway. The broker
 - Rewrite `ui://` URIs using the server's existing `prefix` to avoid cross-upstream collisions
 - Route `resources/read` to the correct upstream by parsing the prefixed URI
 - Rewrite `_meta.ui.resourceUri` in `tools/call` responses to match the prefixed form
+- Set `x-mcp-resourceuri` on `resources/read`, alongside the existing `x-mcp-servername`, so AuthPolicy can enforce access per resource, mirroring `x-mcp-toolname` for tools
 
 ## Non-Goals
 
 - Non-`ui://` URI schemes - tracked in [#1238](https://github.com/Kuadrant/mcp-gateway/issues/1238)
 - Resource subscriptions - the 2026-07-28 spec update (SEP-2567) removes protocol sessions and restricts server-to-client requests, fundamentally changing the delivery model. Scope narrowed per [guidance on #788](https://github.com/Kuadrant/mcp-gateway/issues/788#issuecomment-4682923399); tracked separately as #597 (closed)
-- URI templates (`resources/templates/list`)
+- URI templates (`resources/templates/list`) - `x-mcp-resourceuri` per-resource enforcement (see Authorization) only applies to the fixed, listable resources this design handles; a template has no single fixed value to place in the header, so enforcement does not extend to it
 - Stateless (Streamable HTTP) protocol support
 - VirtualServer filtering for resources
 - `cacheScope` / `ttlMs` cache-aware proxying (SEP-2549, future consideration - see [scoping discussion on #788](https://github.com/Kuadrant/mcp-gateway/issues/788#issuecomment-4682923399)). If built, invalidation should be `ttlMs`-based rather than relying on `notifications/resources/list_changed`, since SEP-2567 restricts the server-to-client push that notification depends on.
@@ -83,7 +84,7 @@ sequenceDiagram
         MCPRouter-->>MCPRouter: extract params.uri, parse authority segment
         MCPRouter-->>MCPRouter: GetServerInfoByResource(uri)
         MCPRouter-->>MCPRouter: strip prefix, reconstruct original URI
-        MCPRouter-->>MCPRouter: rewrite params.uri, set routing headers
+        MCPRouter-->>MCPRouter: rewrite params.uri, set x-mcp-servername, x-mcp-resourceuri
         MCPRouter-->>Gateway: routing
         Gateway-->>Upstream: POST /mcp resources/read (original uri)
         Upstream-->>MCPClient: resource contents
@@ -109,7 +110,7 @@ sequenceDiagram
 | Upstream client | `internal/broker/upstream/mcp.go` | Add `SupportsResources()` and `ListResources()` to the `MCP` interface |
 | Upstream connection | `internal/broker/upstream/manager.go` | Add `ListResources()` for pull-time fetching; no pre-registration |
 | Broker | `internal/broker/broker.go` | Enable resource capabilities, gated on at least one upstream supporting resources, following the same pattern as prompts; add a `resources/list` case to `filteringMiddleware`; add `GetServerInfoByResource()` to `MCPBroker` interface |
-| Router request | `internal/mcp-router/request_handlers.go` | Add `HandleResourceRead()`, reusing the existing `validateSession()` check `HandleToolCall` already uses; set `x-mcp-servername` via `headers.WithMCPServerName(serverInfo.Name)` before routing, same as `HandleToolCall` does today, required for AuthPolicy enforcement (see Security Considerations); add `resources/read` case in `RouteMCPRequest`; add `ResourceURI()` to `MCPRequest` |
+| Router request | `internal/mcp-router/request_handlers.go` | Add `HandleResourceRead()`, reusing the existing `validateSession()` check `HandleToolCall` already uses; set `x-mcp-servername` via `headers.WithMCPServerName(serverInfo.Name)` and `x-mcp-resourceuri` via `headers.WithMCPResourceURI(uri)` before routing, mirroring how `HandleToolCall` sets `x-mcp-servername`/`x-mcp-toolname` today, so AuthPolicy can enforce per-resource access (see Authorization); add `resources/read` case in `RouteMCPRequest`; add `ResourceURI()` to `MCPRequest` |
 | Router response | `internal/mcp-router/server.go`, `internal/mcp-router/response_handlers.go`, new `internal/mcp-router/resource_rewrite.go` | Add `serverPrefix` to `MCPRequest`; construct `resourceURIRewriter` in the `ResponseHeaders` case, gated on `isToolCall() && serverPrefix != ""` (mirroring how `sseRewriter` is wired today); broaden the `ModeOverride` condition in `response_handlers.go` to also cover this case; detect and rewrite `_meta.ui.resourceUri` in `tools/call` response bodies |
 | Router response (rename) | `internal/mcp-router/elicitation.go` | Rename `sseRewriter` to `elicitationRewriter` so its name reflects what it's for, now that a second response rewriter exists |
 | Config / CRD | `internal/config/types.go`, `api/v1alpha1/types.go` | No changes (VirtualServer filtering out of scope) |
@@ -157,6 +158,10 @@ A new `filtered_resources_handler.go` mirrors `filtered_prompts_handler.go`. Too
 
 Enforcement doesn't change here: a missing `resources` key makes no assertion about resources (`enforceCapabilityFilter` still governs behavior), and an empty map (`"resources": {}`) explicitly denies all resources.
 
+**Per-resource enforcement**: the `resources` JWT claim and `filtered_resources_handler.go` only control what appears in `resources/list` - they say nothing about what `resources/read` will serve. To close that, `HandleResourceRead` sets `x-mcp-resourceuri` (the resolved, unprefixed URI) as a routing header alongside `x-mcp-servername`, the same way `HandleToolCall` sets `x-mcp-toolname` alongside `x-mcp-servername` for tools. This lets AuthPolicy key on the specific resource being read, not just the destination server, matching the per-item enforcement tools and prompts already get via `x-mcp-toolname`/`x-mcp-promptname`. Like those headers, `x-mcp-resourceuri` is router-set only - parsed from `params.uri` before AuthPolicy evaluates, never client-settable.
+
+This only covers the fixed, listable resources this design handles (see Non-Goals): URI templates (`resources/templates/list`) have no single fixed value to place in the header, so per-resource enforcement does not extend to them.
+
 ### Security Considerations
 
 - Prefix values are re-validated against an allowlist (`[a-z0-9_]+`), not a blocklist of a few unsafe characters, at the point they're injected into a `ui://` authority segment, independent of the CRD's `prefix` pattern validation - defense-in-depth in case that pattern is loosened later for tool-naming reasons alone. See "Prefix safety for URI injection" above.
@@ -164,7 +169,8 @@ Enforcement doesn't change here: a missing `resources` key makes no assertion ab
 - The `_meta.ui.resourceUri` rewrite only applies to `ui://` URIs. A non-`ui://` value or malformed URI in `_meta` is left untouched.
 - `resources/read` routing uses the same client auth flow as `tools/call` - the client's Authorization header flows through to the upstream. `credentialRef` on MCPServerRegistration is only for broker-to-upstream connections, not client-facing auth.
 - No new privilege escalation surface. Resources are a distinct capability from tools and prompts in the JWT claim - authorization for tools on a server does not grant access to its resources.
-- The `resources` JWT claim and `filtered_resources_handler.go` only control what appears in `resources/list`, not what `resources/read` will serve. `HandleResourceRead` sets `x-mcp-servername` (resolved via `GetServerInfoByResource`) as a routing header, the same way `HandleToolCall` does today, so AuthPolicy can still enforce access at the server level. This is a narrower guarantee than tools and prompts get: AuthPolicy can key on `x-mcp-toolname`/`x-mcp-promptname` for per-item enforcement, but there is no equivalent per-resource-URI header here, so a client authorized to read one URI on a server can read any other URI on that same server, even ones excluded from its `resources` claim. This is not the same as the documented `MCPVirtualServer` listing-versus-calling gap tools already have (see `docs/design/security-architecture.md`) - tools have a per-item enforcement option available via `x-mcp-toolname`, resources as designed here do not.
+- `resources/read` gets the same per-item enforcement as tools and prompts: `HandleResourceRead` sets both `x-mcp-servername` and `x-mcp-resourceuri` as routing headers, so AuthPolicy can restrict access down to a specific resource, not just the destination server (see Authorization). This closes what would otherwise be a narrower guarantee than tools/prompts get, and is not the same as the documented `MCPVirtualServer` listing-versus-calling gap tools already have (see `docs/design/security-architecture.md`) - that gap is about listing vs. calling, this is about per-item enforcement being available at all.
+- Per-resource enforcement only applies to fixed, listable resources - URI templates (`resources/templates/list`) are out of scope for this design (see Non-Goals) and have no fixed URI to enforce against.
 
 ### Forward Compatibility
 
@@ -186,11 +192,12 @@ Two spec changes are coming that will reshape how clients and servers connect: S
 ### Future Considerations
 
 - **Stateless / session-less spec evolution**: both SEP-2575 and SEP-2567 are unreleased, and per [maintainer guidance on #788](https://github.com/Kuadrant/mcp-gateway/issues/788#issuecomment-4682923399) this design stays narrowed to the current, stateful spec rather than building against either (see "Forward Compatibility" above for why that's a safe bet). The one real coupling point for whoever picks this up later: `ListResources()` goes through the same upstream connection abstraction in `internal/broker/upstream/manager.go` that `ListTools`/`ListPrompts` already use, rather than a resources-specific connection path. If the handshake model changes, that's a single shared migration, not three divergent ones, and it's not specific to resource federation either: it would affect the broker's existing tool/prompt capability advertisement just as much, so any future redesign belongs at that shared layer, not here.
+- **`docs/guides/authorization.md` example**: that guide's Step 2 shows an AuthPolicy keyed on `x-mcp-toolname`/`x-mcp-promptname`; once `x-mcp-resourceuri` ships it should get the same treatment. Deferred to a follow-up rather than done alongside this design, since the guide documents a working system and the header doesn't exist until this is implemented.
 
 ## Testing Strategy
 
-- **Unit tests**: `ListResources()` per upstream; URI rewriting (prefix injection and stripping for `ui://`, including the longest-prefix-match case for overlapping prefixes); `GetServerInfoByResource()` prefix matching; `HandleResourceRead()` body rewriting; `filteringMiddleware` resources/list merging; `_meta.ui.resourceUri` rewrite in the response handler; resource filtering via `x-mcp-authorized`. Mirror the tool and prompt test patterns in `manager_test.go`, `broker_test.go`, `request_handlers_test.go`.
-- **E2E tests**: Register a server with `ui://` resources, verify `resources/list` returns prefixed URIs, call `resources/read` and verify contents are returned, verify `_meta.ui.resourceUri` in a tool response is prefixed. Test with multiple servers to confirm prefix isolation. Add a `ui://` resource to the existing `server1` test server (which already exposes an `embedded:info` resource) rather than standing up a dedicated test server.
+- **Unit tests**: `ListResources()` per upstream; URI rewriting (prefix injection and stripping for `ui://`, including the longest-prefix-match case for overlapping prefixes); `GetServerInfoByResource()` prefix matching; `HandleResourceRead()` body rewriting and `x-mcp-servername`/`x-mcp-resourceuri` header setting; `filteringMiddleware` resources/list merging; `_meta.ui.resourceUri` rewrite in the response handler; resource filtering via `x-mcp-authorized`. Mirror the tool and prompt test patterns in `manager_test.go`, `broker_test.go`, `request_handlers_test.go`.
+- **E2E tests**: Register a server with `ui://` resources, verify `resources/list` returns prefixed URIs, call `resources/read` and verify contents are returned, verify `_meta.ui.resourceUri` in a tool response is prefixed. Verify an AuthPolicy keyed on `x-mcp-resourceuri` can allow one resource and deny another on the same server. Test with multiple servers to confirm prefix isolation. Add a `ui://` resource to the existing `server1` test server (which already exposes an `embedded:info` resource) rather than standing up a dedicated test server.
 
 ## References
 
