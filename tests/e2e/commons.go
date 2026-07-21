@@ -121,12 +121,12 @@ func toolDiscServerHostDefault() string {
 
 // public hosts - derived from E2E_DOMAIN
 var (
-	gatewayPublicHost = goenv.GetDefault("GATEWAY_PUBLIC_HOST", gatewayPublicHostDefault())
+	gatewayPublicHost       = goenv.GetDefault("GATEWAY_PUBLIC_HOST", gatewayPublicHostDefault())
 	E2E1PublicHost          = goenv.GetDefault("E2E1_PUBLIC_HOST", "e2e-1."+e2eDomain)
 	TeamAPublicHost         = goenv.GetDefault("TEAM_A_PUBLIC_HOST", "team-a."+e2eDomain)
 	TeamBPublicHost         = goenv.GetDefault("TEAM_B_PUBLIC_HOST", "team-b."+e2eDomain)
 	ElicitationPublicHost   = goenv.GetDefault("ELICITATION_PUBLIC_HOST", "elicitation."+e2eDomain)
-	ToolDiscoveryPublicHost  = goenv.GetDefault("TOOL_DISCOVERY_PUBLIC_HOST", toolDiscPublicHostDefault())
+	ToolDiscoveryPublicHost = goenv.GetDefault("TOOL_DISCOVERY_PUBLIC_HOST", toolDiscPublicHostDefault())
 	ToolDiscoveryServerHost = goenv.GetDefault("TOOL_DISCOVERY_SERVER_HOST", toolDiscServerHostDefault())
 )
 
